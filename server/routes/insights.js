@@ -30,8 +30,26 @@ router.get('/', authHelper.isLoggedInMessages, function (req, res) {
     messages.clone().count('* as count'),
     messages.clone().countDistinct('address as count'),
     messages.clone().countDistinct('alias_id as count'),
-    messages.clone().select('address').count('* as count').groupBy('address').orderBy('count', 'desc').limit(10),
-    messages.clone().select('source').count('* as count').groupBy('source').orderBy('count', 'desc').limit(10)
+    messages.clone()
+      .select('messages.address')
+      .count('* as count')
+      .groupBy('messages.address')
+      .orderBy('count', 'desc')
+      .limit(10),
+    messages.clone()
+      .leftJoin('capcodes', 'capcodes.id', 'messages.alias_id')
+      .select('capcodes.address', 'capcodes.alias', 'capcodes.agency')
+      .count('messages.id as count')
+      .whereNotNull('messages.alias_id')
+      .groupBy('capcodes.id', 'capcodes.address', 'capcodes.alias', 'capcodes.agency')
+      .orderBy('count', 'desc')
+      .limit(10),
+    messages.clone()
+      .select('messages.source')
+      .count('messages.id as count')
+      .groupBy('messages.source')
+      .orderBy('count', 'desc')
+      .limit(10)
   ]).then(function (results) {
     res.status(200).json({
       range: range,
@@ -39,9 +57,10 @@ router.get('/', authHelper.isLoggedInMessages, function (req, res) {
       uniqueAddresses: Number(results[1][0].count || 0),
       uniqueCapcodes: Number(results[2][0].count || 0),
       topAddresses: results[3],
-      topSources: results[4]
+      topCapcodes: results[4],
+      topSources: results[5]
     });
-  }).catch(function () {
+  }).catch(function (err) {
     res.status(500).json({ error: 'Unable to calculate insights' });
   });
 });
