@@ -31,15 +31,15 @@ const lockoutCallback = function(req, res, next, nextValidRequestDate) {
 
 const bruteforcedupe = new ExpressBrute(store, {
         freeRetries: 10,
-        minWait: 5000, // 5 seconds
-        maxWait: 20000, // 20 seconds
+        minWait: 5000,
+        maxWait: 20000,
         failCallback: lockoutCallback,
 });
 
 const bruteforcelogin = new ExpressBrute(store, {
         freeRetries: 5,
-        minWait: 10000, // 10 seconds
-        maxWait: 15 * 60 * 1000, // 15 minutes
+        minWait: 10000,
+        maxWait: 15 * 60 * 1000,
         failCallback: lockoutCallback,
 });
 
@@ -62,8 +62,6 @@ router.route('/login')
         .post(bruteforcelogin.prevent, function(req, res, next) {
                 passport.authenticate('login-user', (err, user) => {
                         if (err) {
-                                //this is commented out as it seems to fire when a user is disabled?! even tho the below functions still run
-                                //res.status(500).send({ status: 'failed', error: 'An Error Occured' });
                                 logger.auth.error(err);
                         } else if (!user) {
                                 res.status(401).send({ status: 'failed', error: 'Check Details and try again' });
@@ -72,46 +70,23 @@ router.route('/login')
                                 if (user.status !== 'disabled') {
                                         req.logIn(user, function(err) {
                                                 if (err) {
-                                                        res.status(401).send({
-                                                                status: 'failed',
-                                                                error: 'An error occured',
-                                                        });
-                                                        logger.auth.debug(
-                                                                `Failed login ${JSON.stringify(user)} ${err}`
-                                                        );
+                                                        res.status(401).send({ status: 'failed', error: 'An error occured' });
+                                                        logger.auth.debug(`Failed login ${JSON.stringify(user)} ${err}`);
                                                 } else {
-                                                        // Update last logon timestamp for user
                                                         const { id } = user;
-                                                        // create the datetime, thanks mysql ┌∩┐(◣_◢)┌∩┐
-                                                        const currentTimestamp = moment().unix(); // in seconds
-                                                        const currentDatetime = moment(currentTimestamp * 1000).format(
-                                                                'YYYY-MM-DD HH:mm:ss'
-                                                        );
-                                                        return db
-                                                                .from('users')
+                                                        const currentTimestamp = moment().unix();
+                                                        const currentDatetime = moment(currentTimestamp * 1000).format('YYYY-MM-DD HH:mm:ss');
+                                                        return db.from('users')
                                                                 .where('id', '=', id)
-                                                                .update({
-                                                                        lastlogondate: currentDatetime,
-                                                                })
+                                                                .update({ lastlogondate: currentDatetime })
                                                                 .then(() => {
-                                                                        // reset the bruteforce timer after successful login
                                                                         bruteforcelogin.reset(null);
                                                                         if (user.role !== 'admin') {
-                                                                                res.status(200).send({
-                                                                                        status: 'ok',
-                                                                                        redirect: '/',
-                                                                                });
+                                                                                res.status(200).send({ status: 'ok', redirect: '/' });
                                                                         } else {
-                                                                                res.status(200).send({
-                                                                                        status: 'ok',
-                                                                                        redirect: '/admin',
-                                                                                });
+                                                                                res.status(200).send({ status: 'ok', redirect: '/admin' });
                                                                         }
-                                                                        logger.auth.debug(
-                                                                                `Successful login ${JSON.stringify(
-                                                                                        user
-                                                                                )}`
-                                                                        );
+                                                                        logger.auth.debug(`Successful login ${JSON.stringify(user)}`);
                                                                 })
                                                                 .catch(err => {
                                                                         logger.db.error(err);
@@ -127,9 +102,10 @@ router.route('/login')
         });
 
 router.route('/logout').get(authHelper.isLoggedIn, function(req, res) {
+        const username = req.user.username;
         req.logout();
         res.redirect('/');
-        logger.auth.debug(`Successful Logout ${req.user.username}`);
+        logger.auth.debug(`Successful Logout ${username}`);
 });
 
 router.route('/profile/').get(authHelper.isLoggedIn, function(req, res) {
@@ -170,13 +146,7 @@ router.route('/profile/:id')
                         db.from('users')
                                 .returning('id')
                                 .where('username', '=', req.user.username)
-                                .update({
-                                        username,
-                                        givenname,
-                                        surname,
-                                        email,
-                                        lastlogondate,
-                                })
+                                .update({ username, givenname, surname, email, lastlogondate })
                                 .then(result => {
                                         console.timeEnd('insert');
                                         res.status(200).send({ status: 'ok', id: result });
@@ -209,68 +179,38 @@ router.route('/register')
                 if (reg) {
                         const salt = bcrypt.genSaltSync();
                         const hash = bcrypt.hashSync(req.body.password, salt);
-                        // dupecheck to prevent a non-literal insert being abused to reset passwords
                         return db('users')
                                 .where('username', '=', req.body.username)
                                 .orWhere('email', '=', req.body.email)
                                 .select('id')
                                 .then(row => {
                                         if (row.length > 0) {
-                                                logger.auth.error(
-                                                        `Duplicate registration via API${JSON.stringify(row)}`
-                                                );
+                                                logger.auth.error(`Duplicate registration via API${JSON.stringify(row)}`);
                                                 res.status(401).json({ error: 'access denied' });
                                         } else {
                                                 return db('users')
-                                                        .insert({
-                                                                username: req.body.username,
-                                                                password: hash,
-                                                                givenname: req.body.givenname,
-                                                                surname: req.body.surname,
-                                                                email: req.body.email,
-                                                                role: 'user',
-                                                                status: 'active',
-                                                                lastlogondate: Date.now(),
-                                                        })
+                                                        .insert({ username: req.body.username, password: hash, givenname: req.body.givenname, surname: req.body.surname, email: req.body.email, role: 'user', status: 'active', lastlogondate: Date.now() })
                                                         .then(() => {
                                                                 passport.authenticate('login-user', (err, user) => {
                                                                         if (user) {
                                                                                 req.logIn(user, function(err) {
                                                                                         if (err) {
-                                                                                                res.status(500).json({
-                                                                                                        status:
-                                                                                                                'failed',
-                                                                                                        error: err,
-                                                                                                        redirect:
-                                                                                                                '/auth/register',
-                                                                                                });
+                                                                                                res.status(500).json({ status: 'failed', error: err, redirect: '/auth/register' });
                                                                                                 logger.auth.error(err);
                                                                                         } else {
-                                                                                                res.status(200).json({
-                                                                                                        status: 'ok',
-                                                                                                        redirect: '/',
-                                                                                                });
-                                                                                                logger.auth.info(
-                                                                                                        `Created Account: ${user}`
-                                                                                                );
+                                                                                                res.status(200).json({ status: 'ok', redirect: '/' });
+                                                                                                logger.auth.info(`Created Account: ${user}`);
                                                                                         }
                                                                                 });
                                                                         } else {
                                                                                 logger.auth.error(err);
-                                                                                res.status(500).json({
-                                                                                        status: 'failed',
-                                                                                        error: err,
-                                                                                        redirect: '/auth/register',
-                                                                                });
+                                                                                res.status(500).json({ status: 'failed', error: err, redirect: '/auth/register' });
                                                                         }
                                                                 })(req, res, next);
                                                         })
                                                         .catch(err => {
                                                                 logger.auth.error(err);
-                                                                res.status(400).json({
-                                                                        status: 'failed',
-                                                                        error: 'invalid data',
-                                                                });
+                                                                res.status(400).json({ status: 'failed', error: 'invalid data' });
                                                         });
                                         }
                                 });
@@ -292,23 +232,19 @@ router.route('/reset')
                                 username: user,
                         });
                 } else {
-                res.redirect('/auth/login');
+                        res.redirect('/auth/login');
                 }
         })
         .post(authHelper.isLoggedIn, function(req, res) {
                 const { password } = req.body;
-                // bcrypt function
                 if (password.length && !authHelper.comparePass(password, req.user.password)) {
                         const salt = bcrypt.genSaltSync();
                         const hash = bcrypt.hashSync(req.body.password, salt);
                         const { id } = req.user;
-                        //need to update this query to select the user first then update. 
                         db.from('users')
                                 .returning('id')
                                 .where('id', '=', id)
-                                .update({
-                                        password: hash,
-                                })
+                                .update({ password: hash })
                                 .then(() => {
                                         res.status(200).send({ status: 'ok', redirect: '/' });
                                         logger.auth.debug(`${req.user.username} Password Reset Successfully`);
@@ -325,63 +261,38 @@ router.route('/reset')
 
 router.route('/userCheck/username/:id').get(bruteforcedupe.prevent, function(req, res, next) {
         const { id } = req.params;
-        db.from('users')
-                .select('username')
-                .where('username', id)
-                .then(row => {
-                        if (row.length > 0) {
-                                const rowsend = row[0];
-                                res.status(200);
-                                res.json(rowsend);
-                        } else {
-                                const rowsend = {
-                                        username: '',
-                                        password: '',
-                                        givenname: '',
-                                        surname: '',
-                                        email: '',
-                                        role: 'user',
-                                        status: 'active',
-                                };
-                                res.status(200);
-                                res.json(rowsend);
-                        }
-                })
-                .catch(err => {
-                        logger.main.error(err);
-                        return next(err);
-                });
+        db.from('users').select('username').where('username', id).then(row => {
+                if (row.length > 0) {
+                        const rowsend = row[0];
+                        res.status(200);
+                        res.json(rowsend);
+                } else {
+                        const rowsend = { username: '', password: '', givenname: '', surname: '', email: '', role: 'user', status: 'active' };
+                        res.status(200);
+                        res.json(rowsend);
+                }
+        }).catch(err => {
+                logger.main.error(err);
+                return next(err);
+        });
 });
 
 router.route('/userCheck/email/:id').get(bruteforcedupe.prevent, function(req, res, next) {
         const { id } = req.params;
-        db.from('users')
-                .select('email')
-                .where('email', id)
-                .then(row => {
-                        if (row.length > 0) {
-                                const rowsend = row[0];
-                                res.status(200);
-                                res.json(rowsend);
-                        } else {
-                                const rowsend = {
-                                        username: '',
-                                        password: '',
-                                        givenname: '',
-                                        surname: '',
-                                        email: '',
-                                        role: 'user',
-                                        status: 'active',
-                                };
-                                res.status(200);
-                                res.json(rowsend);
-                        }
-                })
-                .catch(err => {
-                        logger.main.error(err);
-                        return next(err);
-                });
+        db.from('users').select('email').where('email', id).then(row => {
+                if (row.length > 0) {
+                        const rowsend = row[0];
+                        res.status(200);
+                        res.json(rowsend);
+                } else {
+                        const rowsend = { username: '', password: '', givenname: '', surname: '', email: '', role: 'user', status: 'active' };
+                        res.status(200);
+                        res.json(rowsend);
+                }
+        }).catch(err => {
+                logger.main.error(err);
+                return next(err);
+        });
 });
 
 module.exports = router;
-
