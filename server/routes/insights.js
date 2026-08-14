@@ -15,6 +15,32 @@ function getRange(req) {
   return { start: start, end: end };
 }
 
+function buildActivity(rows, start, end) {
+  var hour = 60 * 60;
+  var firstBucket = Math.floor(start / hour) * hour;
+  var lastBucket = Math.floor(end / hour) * hour;
+  var buckets = {};
+
+  for (var bucket = firstBucket; bucket <= lastBucket; bucket += hour) {
+    buckets[bucket] = 0;
+  }
+
+  rows.forEach(function (row) {
+    var timestamp = Number(row.timestamp);
+    if (!isNaN(timestamp)) {
+      var bucket = Math.floor(timestamp / hour) * hour;
+      if (buckets.hasOwnProperty(bucket)) buckets[bucket]++;
+    }
+  });
+
+  return Object.keys(buckets).map(function (bucket) {
+    return {
+      timestamp: Number(bucket),
+      count: buckets[bucket]
+    };
+  });
+}
+
 router.get('/', authHelper.isLoggedInMessages, function (req, res) {
   var range = getRange(req);
 
@@ -49,7 +75,8 @@ router.get('/', authHelper.isLoggedInMessages, function (req, res) {
       .count('messages.id as count')
       .groupBy('messages.source')
       .orderBy('count', 'desc')
-      .limit(10)
+      .limit(10),
+    messages.clone().select('timestamp')
   ]).then(function (results) {
     res.status(200).json({
       range: range,
@@ -58,7 +85,8 @@ router.get('/', authHelper.isLoggedInMessages, function (req, res) {
       uniqueCapcodes: Number(results[2][0].count || 0),
       topAddresses: results[3],
       topCapcodes: results[4],
-      topSources: results[5]
+      topSources: results[5],
+      activity: buildActivity(results[6], range.start, range.end)
     });
   }).catch(function (err) {
     res.status(500).json({ error: 'Unable to calculate insights' });
