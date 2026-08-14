@@ -84,6 +84,7 @@ var dbinit = require('./db');
 var db = require('./knex/knex.js');
 
 var passport = require('./auth/local');
+var authHelper = require('./middleware/authhelper');
 
 // routes
 var index = require('./routes/index');
@@ -127,7 +128,7 @@ adminio.on('connection', function (socket) {
     socket.removeAllListeners();
     debug('client connect to admin socket');
 //    adminio.on('echo', function (data) {
-//        adminio.emit('message', data);
+//        adminio.emit('echo', data);
 //        console.log('message', data);
 //    });
 });
@@ -182,6 +183,11 @@ app.use('/', index);
 app.use('/admin', admin);
 app.use('/post', api);
 app.use('/api', api);
+
+app.get('/insights', authHelper.isLoggedInMessages, function (req, res) {
+  res.render('insights', { pageTitle: 'Insights' });
+});
+
 app.use('/api/insights', insights);
 app.use('/auth', auth);
 
@@ -222,7 +228,7 @@ if (dbtype == 'mysql') {
   if (!cronvalidate.isValidCron(cronartime,{ seconds: true })) {
     logger.main.warn('CRON: Invalid CRON configuration in config file. Defaulting to: "0 5,35 * * * *" ')
     cronartime = "0 5,35 * * * *";
-  } 
+  }
   var aliasRefreshJob = require('cron').CronJob;
   new aliasRefreshJob(cronartime, function() {
     var refreshRequired = nconf.get('database:aliasRefreshRequired')
@@ -243,8 +249,8 @@ if (dbtype == 'mysql') {
           logger.main.info('CRON: Alias Refresh Successful')
       })
       .catch((err) => {
-        logger.main.error('CRON: Error refreshing aliases' + err); 
-        console.timeEnd('updateMap'); 
+        logger.main.error('CRON: Error refreshing aliases' + err);
+        console.timeEnd('updateMap');
       })
     } else {
       logger.main.debug('CRON: Alias Refresh not Required, Skipping.')
@@ -253,7 +259,7 @@ if (dbtype == 'mysql') {
 }
 
 //Disable all logging for tests
-if(process.env.NODE_ENV === 'test') { 
+if(process.env.NODE_ENV === 'test') {
   logger.main.silent = true
   logger.auth.silent = true
   logger.db.silent = true
