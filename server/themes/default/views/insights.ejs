@@ -19,7 +19,15 @@
             <button type="button" class="btn btn-default insight-range" data-days="7">7 days</button>
             <button type="button" class="btn btn-default insight-range" data-days="30">30 days</button>
           </div>
+          <button type="button" class="btn btn-default" id="insight-custom-toggle">Custom</button>
         </div>
+      </div>
+      <div id="insight-custom" class="well well-sm" style="display:none; margin-top:15px;">
+        <form class="form-inline" id="insight-custom-form">
+          <div class="form-group"><label for="insight-start" style="margin-right:6px;">From</label><input type="datetime-local" class="form-control" id="insight-start"></div>
+          <div class="form-group" style="margin-left:10px;"><label for="insight-end" style="margin-right:6px;">To</label><input type="datetime-local" class="form-control" id="insight-end"></div>
+          <button type="submit" class="btn btn-primary" style="margin-left:10px;">Apply</button>
+        </form>
       </div>
       <hr>
     </div>
@@ -52,10 +60,18 @@
 
 <script>
 var insightDays = 1;
+var insightCustomRange = null;
 
 function insightRange() {
+  if (insightCustomRange) return insightCustomRange;
   var end = Math.floor(Date.now() / 1000);
   return { start: end - (insightDays * 24 * 60 * 60), end: end };
+}
+
+function toDateTimeLocal(timestamp) {
+  var date = new Date(timestamp * 1000);
+  var pad = function (value) { return String(value).padStart(2, '0'); };
+  return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) + 'T' + pad(date.getHours()) + ':' + pad(date.getMinutes());
 }
 
 function renderInsightChart(activity) {
@@ -99,11 +115,36 @@ function loadInsights() {
 
 $(function () {
   $('.insight-range').on('click', function () {
+    insightCustomRange = null;
     insightDays = Number($(this).data('days'));
     $('.insight-range').removeClass('active');
     $(this).addClass('active');
+    $('#insight-custom').hide();
     loadInsights();
   });
+
+  $('#insight-custom-toggle').on('click', function () {
+    $('#insight-custom').toggle();
+    if ($('#insight-custom').is(':visible')) {
+      var range = insightRange();
+      $('#insight-start').val(toDateTimeLocal(range.start));
+      $('#insight-end').val(toDateTimeLocal(range.end));
+    }
+  });
+
+  $('#insight-custom-form').on('submit', function (event) {
+    event.preventDefault();
+    var start = new Date($('#insight-start').val()).getTime() / 1000;
+    var end = new Date($('#insight-end').val()).getTime() / 1000;
+    if (!isFinite(start) || !isFinite(end) || end <= start) {
+      $('#insight-error').text('Please select a valid date range.').show();
+      return;
+    }
+    insightCustomRange = { start: Math.floor(start), end: Math.floor(end) };
+    $('.insight-range').removeClass('active');
+    loadInsights();
+  });
+
   $('.insight-range[data-days="1"]').addClass('active');
   loadInsights();
 });
