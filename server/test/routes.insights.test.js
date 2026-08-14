@@ -38,6 +38,8 @@ describe('GET /api/insights', () => {
                 Number(res.body.topAddresses[0].count).should.eql(2);
                 res.body.topSources[0].source.should.eql('Client 1');
                 Number(res.body.topSources[0].count).should.eql(2);
+                res.body.activity.should.be.an('array');
+                res.body.activity.reduce((total, point) => total + Number(point.count), 0).should.eql(5);
                 done();
             });
     });
