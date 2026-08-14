@@ -14,6 +14,22 @@
   </div>
 
   <div class="row">
+    <div class="col-xs-12">
+      <div class="panel panel-default">
+        <div class="panel-heading"><strong>Date range</strong></div>
+        <div class="panel-body">
+          <div class="btn-group" role="group" aria-label="Insights date range">
+            <button type="button" class="btn btn-default insight-range" data-hours="24">Last 24 hours</button>
+            <button type="button" class="btn btn-default insight-range" data-hours="168">Last 7 days</button>
+            <button type="button" class="btn btn-default insight-range" data-hours="720">Last 30 days</button>
+          </div>
+          <span id="insight-range-label" class="text-muted" style="margin-left:10px;"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
     <div class="col-sm-6 col-md-3"><div class="panel panel-default"><div class="panel-body text-center"><div class="text-muted">Messages</div><div id="insight-messages" class="h2">—</div></div></div></div>
     <div class="col-sm-6 col-md-3"><div class="panel panel-default"><div class="panel-body text-center"><div class="text-muted">Unique addresses</div><div id="insight-addresses" class="h2">—</div></div></div></div>
     <div class="col-sm-6 col-md-3"><div class="panel panel-default"><div class="panel-body text-center"><div class="text-muted">Unique capcodes</div><div id="insight-capcodes" class="h2">—</div></div></div></div>
@@ -83,13 +99,18 @@ function renderInsightTable(selector, rows, label) {
   $(selector).html(html);
 }
 
-$(function () {
-  $.getJSON('/api/insights')
+function loadInsights(hours) {
+  var end = Math.floor(Date.now() / 1000);
+  var start = end - (hours * 60 * 60);
+  $('#insight-range-label').text('Loading…');
+
+  $.getJSON('/api/insights?start=' + start + '&end=' + end)
     .done(function (data) {
       $('#insight-messages').text(data.messages.toLocaleString());
       $('#insight-addresses').text(data.uniqueAddresses.toLocaleString());
       $('#insight-capcodes').text(data.uniqueCapcodes.toLocaleString());
       $('#insight-source').text(data.topSources.length ? data.topSources[0].source : '—');
+      $('#insight-range-label').text('Showing the last ' + (hours === 24 ? '24 hours' : hours === 168 ? '7 days' : '30 days'));
       renderInsightChart(data.activity);
       renderInsightTable('#insight-address-table', data.topAddresses, function (row) { return row.address || '—'; });
       renderInsightTable('#insight-capcode-table', data.topCapcodes, function (row) { return row.alias || row.address || '—'; });
@@ -99,7 +120,18 @@ $(function () {
       var message = 'Unable to load Insights.';
       if (xhr.responseJSON && xhr.responseJSON.error) message = xhr.responseJSON.error;
       $('#insight-error').text(message).show();
+      $('#insight-range-label').text('');
     });
+}
+
+$(function () {
+  $('.insight-range').on('click', function () {
+    $('.insight-range').removeClass('active');
+    $(this).addClass('active');
+    loadInsights(Number($(this).data('hours')));
+  });
+  $('.insight-range[data-hours="24"]').addClass('active');
+  loadInsights(24);
 });
 </script>
 </body>
