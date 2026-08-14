@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<% include global/header.ejs %>
+</head>
+<body id="insights-body">
+<% include global/menu.ejs %>
+
+<div id="content" class="container-fluid" style="margin-top: 20px;">
+  <div class="row">
+    <div class="col-xs-12">
+      <h2><i class="fa fa-line-chart"></i> PagerMon Insights</h2>
+      <p class="text-muted">Message activity for the selected period.</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-sm-6 col-md-3">
+      <div class="panel panel-default">
+        <div class="panel-body text-center">
+          <div class="text-muted">Messages</div>
+          <div id="insight-messages" class="h2">—</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-md-3">
+      <div class="panel panel-default">
+        <div class="panel-body text-center">
+          <div class="text-muted">Unique addresses</div>
+          <div id="insight-addresses" class="h2">—</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-md-3">
+      <div class="panel panel-default">
+        <div class="panel-body text-center">
+          <div class="text-muted">Unique capcodes</div>
+          <div id="insight-capcodes" class="h2">—</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-md-3">
+      <div class="panel panel-default">
+        <div class="panel-body text-center">
+          <div class="text-muted">Top source</div>
+          <div id="insight-source" class="h2">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="insight-error" class="alert alert-danger" style="display:none;"></div>
+</div>
+
+<script>
+$(function () {
+  $.getJSON('/api/insights')
+    .done(function (data) {
+      $('#insight-messages').text(data.messages.toLocaleString());
+      $('#insight-addresses').text(data.uniqueAddresses.toLocaleString());
+      $('#insight-capcodes').text(data.uniqueCapcodes.toLocaleString());
+      $('#insight-source').text(data.topSources.length ? data.topSources[0].source : '—');
+    })
+    .fail(function (xhr) {
+      var message = 'Unable to load Insights.';
+      if (xhr.responseJSON && xhr.responseJSON.error) message = xhr.responseJSON.error;
+      $('#insight-error').text(message).show();
+    });
+});
+</script>
+</body>
+</html>
