@@ -9,6 +9,9 @@
     <div class="collapse navbar-collapse" id="myNavbar">
       <ul class="nav navbar-nav">
         <li><a href="/"><span class="fa fa-fw fa-home"></span> Home</a></li>
+        <% if (login) { %>
+        <li><a href="/insights"><span class="fa fa-fw fa-line-chart"></span> Insights</a></li>
+        <% } %>
         <% if (login && user.role == 'admin') { %>
         <li class="dropdown">
           <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><span class="fa fa-fw fa-lock"></span> Admin <span class="caret"></span></a>
