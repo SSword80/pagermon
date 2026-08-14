@@ -218,11 +218,11 @@ if (dbtype == 'mysql') {
   var cronartime = nconf.get('database:aliasRefreshInterval');
   //If value is falsy (undefined, empty, null etc), set as default
   if (!cronartime){cronartime = "0 5,35 * * * *";}
-  //Check value isn't garbage, for example 0 90 * * * *
+  //Check value isn't garbage, if it is set to default
   if (!cronvalidate.isValidCron(cronartime,{ seconds: true })) {
     logger.main.warn('CRON: Invalid CRON configuration in config file. Defaulting to: "0 5,35 * * * *" ')
     cronartime = "0 5,35 * * * *";
-  }
+  } 
   var aliasRefreshJob = require('cron').CronJob;
   new aliasRefreshJob(cronartime, function() {
     var refreshRequired = nconf.get('database:aliasRefreshRequired')
@@ -243,8 +243,8 @@ if (dbtype == 'mysql') {
           logger.main.info('CRON: Alias Refresh Successful')
       })
       .catch((err) => {
-        logger.main.error('CRON: Error refreshing aliases' + err);
-        console.timeEnd('updateMap');
+        logger.main.error('CRON: Error refreshing aliases' + err); 
+        console.timeEnd('updateMap'); 
       })
     } else {
       logger.main.debug('CRON: Alias Refresh not Required, Skipping.')
@@ -253,7 +253,7 @@ if (dbtype == 'mysql') {
 }
 
 //Disable all logging for tests
-if(process.env.NODE_ENV === 'test') {
+if(process.env.NODE_ENV === 'test') { 
   logger.main.silent = true
   logger.auth.silent = true
   logger.db.silent = true
