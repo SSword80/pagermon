@@ -8,24 +8,20 @@
 <div id="content" class="container-fluid" style="margin-top: 20px;">
   <div class="row">
     <div class="col-xs-12">
-      <h2><i class="fa fa-line-chart"></i> PagerMon Insights</h2>
-      <p class="text-muted">Message activity for the selected period.</p>
-    </div>
-  </div>
-
-  <div class="row">
-    <div class="col-xs-12">
-      <div class="panel panel-default">
-        <div class="panel-heading"><strong>Date range</strong></div>
-        <div class="panel-body">
+      <div class="clearfix">
+        <div class="pull-left">
+          <h2><i class="fa fa-line-chart"></i> PagerMon Insights</h2>
+          <p class="text-muted">Message activity for the selected period.</p>
+        </div>
+        <div class="pull-right" style="margin-top: 20px;">
           <div class="btn-group" role="group" aria-label="Insights date range">
-            <button type="button" class="btn btn-default insight-range" data-hours="24">Last 24 hours</button>
-            <button type="button" class="btn btn-default insight-range" data-hours="168">Last 7 days</button>
-            <button type="button" class="btn btn-default insight-range" data-hours="720">Last 30 days</button>
+            <button type="button" class="btn btn-default insight-range" data-days="1">24 hours</button>
+            <button type="button" class="btn btn-default insight-range" data-days="7">7 days</button>
+            <button type="button" class="btn btn-default insight-range" data-days="30">30 days</button>
           </div>
-          <span id="insight-range-label" class="text-muted" style="margin-left:10px;"></span>
         </div>
       </div>
+      <hr>
     </div>
   </div>
 
@@ -55,83 +51,61 @@
 </div>
 
 <script>
+var insightDays = 1;
+
+function insightRange() {
+  var end = Math.floor(Date.now() / 1000);
+  return { start: end - (insightDays * 24 * 60 * 60), end: end };
+}
+
 function renderInsightChart(activity) {
   var container = document.getElementById('insight-chart');
-  if (!activity || !activity.length) {
-    container.innerHTML = '<p class="text-muted">No message activity for this period.</p>';
-    return;
-  }
-  var width = Math.max(container.clientWidth || 800, 600);
-  var height = 300;
-  var padding = { top: 20, right: 20, bottom: 45, left: 55 };
-  var plotWidth = width - padding.left - padding.right;
-  var plotHeight = height - padding.top - padding.bottom;
+  if (!activity || !activity.length) { container.innerHTML = '<p class="text-muted">No message activity for this period.</p>'; return; }
+  var width = Math.max(container.clientWidth || 800, 600), height = 300, padding = { top: 20, right: 20, bottom: 45, left: 55 }, plotWidth = width - padding.left - padding.right, plotHeight = height - padding.top - padding.bottom;
   var max = Math.max.apply(null, activity.map(function (point) { return Number(point.count) || 0; }));
   if (max < 1) max = 1;
   function x(index) { return padding.left + (activity.length === 1 ? plotWidth / 2 : (index / (activity.length - 1)) * plotWidth); }
   function y(value) { return padding.top + plotHeight - ((Number(value) || 0) / max) * plotHeight; }
-  var points = activity.map(function (point, index) { return x(index) + ',' + y(point.count); }).join(' ');
-  var labels = '';
-  var labelCount = Math.min(6, activity.length);
-  for (var i = 0; i < labelCount; i++) {
-    var index = labelCount === 1 ? 0 : Math.round(i * (activity.length - 1) / (labelCount - 1));
-    var date = new Date(Number(activity[index].timestamp) * 1000);
-    var label = date.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-    labels += '<text x="' + x(index) + '" y="' + (height - 12) + '" text-anchor="middle" font-size="11" fill="#777">' + label + '</text>';
-  }
+  var points = activity.map(function (point, index) { return x(index) + ',' + y(point.count); }).join(' '), labels = '', labelCount = Math.min(6, activity.length);
+  for (var i = 0; i < labelCount; i++) { var index = labelCount === 1 ? 0 : Math.round(i * (activity.length - 1) / (labelCount - 1)); var date = new Date(Number(activity[index].timestamp) * 1000); var label = date.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }); labels += '<text x="' + x(index) + '" y="' + (height - 12) + '" text-anchor="middle" font-size="11" fill="#777">' + label + '</text>'; }
   var yLines = '';
-  for (var tick = 0; tick <= 4; tick++) {
-    var value = Math.round(max * tick / 4);
-    var lineY = y(value);
-    yLines += '<line x1="' + padding.left + '" y1="' + lineY + '" x2="' + (width - padding.right) + '" y2="' + lineY + '" stroke="#ddd" />';
-    yLines += '<text x="' + (padding.left - 8) + '" y="' + (lineY + 4) + '" text-anchor="end" font-size="11" fill="#777">' + value + '</text>';
-  }
+  for (var tick = 0; tick <= 4; tick++) { var value = Math.round(max * tick / 4), lineY = y(value); yLines += '<line x1="' + padding.left + '" y1="' + lineY + '" x2="' + (width - padding.right) + '" y2="' + lineY + '" stroke="#ddd" />'; yLines += '<text x="' + (padding.left - 8) + '" y="' + (lineY + 4) + '" text-anchor="end" font-size="11" fill="#777">' + value + '</text>'; }
   container.innerHTML = '<svg width="100%" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="Messages over time">' + yLines + '<line x1="' + padding.left + '" y1="' + (padding.top + plotHeight) + '" x2="' + (width - padding.right) + '" y2="' + (padding.top + plotHeight) + '" stroke="#999" /><polyline points="' + points + '" fill="none" stroke="#337ab7" stroke-width="3" />' + labels + '</svg>';
 }
 
 function renderInsightTable(selector, rows, label) {
   var html = '';
-  (rows || []).forEach(function (row) {
-    var value = label(row);
-    html += '<tr><td>' + $('<div>').text(value).html() + '</td><td class="text-right">' + Number(row.count || 0).toLocaleString() + '</td></tr>';
-  });
+  (rows || []).forEach(function (row) { var value = label(row); html += '<tr><td>' + $('<div>').text(value).html() + '</td><td class="text-right">' + Number(row.count || 0).toLocaleString() + '</td></tr>'; });
   if (!html) html = '<tr><td colspan="2" class="text-muted">No data</td></tr>';
   $(selector).html(html);
 }
 
-function loadInsights(hours) {
-  var end = Math.floor(Date.now() / 1000);
-  var start = end - (hours * 60 * 60);
-  $('#insight-range-label').text('Loading…');
-
-  $.getJSON('/api/insights?start=' + start + '&end=' + end)
+function loadInsights() {
+  var range = insightRange();
+  $.getJSON('/api/insights?start=' + range.start + '&end=' + range.end)
     .done(function (data) {
       $('#insight-messages').text(data.messages.toLocaleString());
       $('#insight-addresses').text(data.uniqueAddresses.toLocaleString());
       $('#insight-capcodes').text(data.uniqueCapcodes.toLocaleString());
       $('#insight-source').text(data.topSources.length ? data.topSources[0].source : '—');
-      $('#insight-range-label').text('Showing the last ' + (hours === 24 ? '24 hours' : hours === 168 ? '7 days' : '30 days'));
       renderInsightChart(data.activity);
       renderInsightTable('#insight-address-table', data.topAddresses, function (row) { return row.address || '—'; });
       renderInsightTable('#insight-capcode-table', data.topCapcodes, function (row) { return row.alias || row.address || '—'; });
       renderInsightTable('#insight-source-table', data.topSources, function (row) { return row.source || '—'; });
+      $('#insight-error').hide();
     })
-    .fail(function (xhr) {
-      var message = 'Unable to load Insights.';
-      if (xhr.responseJSON && xhr.responseJSON.error) message = xhr.responseJSON.error;
-      $('#insight-error').text(message).show();
-      $('#insight-range-label').text('');
-    });
+    .fail(function (xhr) { var message = 'Unable to load Insights.'; if (xhr.responseJSON && xhr.responseJSON.error) message = xhr.responseJSON.error; $('#insight-error').text(message).show(); });
 }
 
 $(function () {
   $('.insight-range').on('click', function () {
+    insightDays = Number($(this).data('days'));
     $('.insight-range').removeClass('active');
     $(this).addClass('active');
-    loadInsights(Number($(this).data('hours')));
+    loadInsights();
   });
-  $('.insight-range[data-hours="24"]').addClass('active');
-  loadInsights(24);
+  $('.insight-range[data-days="1"]').addClass('active');
+  loadInsights();
 });
 </script>
 </body>
