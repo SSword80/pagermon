@@ -89,6 +89,7 @@ var passport = require('./auth/local');
 var index = require('./routes/index');
 var admin = require('./routes/admin');
 var api = require('./routes/api');
+var insights = require('./routes/insights');
 var auth = require('./routes/auth');
 
 var port = normalizePort(process.env.PORT || '3000');
@@ -181,6 +182,7 @@ app.use('/', index);
 app.use('/admin', admin);
 app.use('/post', api);
 app.use('/api', api);
+app.use('/api/insights', insights);
 app.use('/auth', auth);
 
 
