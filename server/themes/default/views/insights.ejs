@@ -15,46 +15,36 @@
 
   <div class="row">
     <div class="col-sm-6 col-md-3">
-      <div class="panel panel-default">
-        <div class="panel-body text-center">
-          <div class="text-muted">Messages</div>
-          <div id="insight-messages" class="h2">—</div>
-        </div>
-      </div>
+      <div class="panel panel-default"><div class="panel-body text-center"><div class="text-muted">Messages</div><div id="insight-messages" class="h2">—</div></div></div>
     </div>
     <div class="col-sm-6 col-md-3">
-      <div class="panel panel-default">
-        <div class="panel-body text-center">
-          <div class="text-muted">Unique addresses</div>
-          <div id="insight-addresses" class="h2">—</div>
-        </div>
-      </div>
+      <div class="panel panel-default"><div class="panel-body text-center"><div class="text-muted">Unique addresses</div><div id="insight-addresses" class="h2">—</div></div></div>
     </div>
     <div class="col-sm-6 col-md-3">
-      <div class="panel panel-default">
-        <div class="panel-body text-center">
-          <div class="text-muted">Unique capcodes</div>
-          <div id="insight-capcodes" class="h2">—</div>
-        </div>
-      </div>
+      <div class="panel panel-default"><div class="panel-body text-center"><div class="text-muted">Unique capcodes</div><div id="insight-capcodes" class="h2">—</div></div></div>
     </div>
     <div class="col-sm-6 col-md-3">
-      <div class="panel panel-default">
-        <div class="panel-body text-center">
-          <div class="text-muted">Top source</div>
-          <div id="insight-source" class="h2">—</div>
-        </div>
-      </div>
+      <div class="panel panel-default"><div class="panel-body text-center"><div class="text-muted">Top source</div><div id="insight-source" class="h2">—</div></div></div>
     </div>
   </div>
 
   <div class="row">
-    <div class="col-xs-12">
+    <div class="col-xs-12 col-md-4">
       <div class="panel panel-default">
-        <div class="panel-heading"><strong>Messages over time</strong></div>
-        <div class="panel-body">
-          <div id="insight-chart" style="width: 100%; min-height: 300px; overflow: hidden;"></div>
-        </div>
+        <div class="panel-heading"><strong>Top addresses</strong></div>
+        <div class="table-responsive"><table class="table table-striped table-condensed"><thead><tr><th>Address</th><th class="text-right">Messages</th></tr></thead><tbody id="insight-address-table"></tbody></table></div>
+      </div>
+    </div>
+    <div class="col-xs-12 col-md-4">
+      <div class="panel panel-default">
+        <div class="panel-heading"><strong>Top capcodes</strong></div>
+        <div class="table-responsive"><table class="table table-striped table-condensed"><thead><tr><th>Capcode</th><th class="text-right">Messages</th></tr></thead><tbody id="insight-capcode-table"></tbody></table></div>
+      </div>
+    </div>
+    <div class="col-xs-12 col-md-4">
+      <div class="panel panel-default">
+        <div class="panel-heading"><strong>Top sources</strong></div>
+        <div class="table-responsive"><table class="table table-striped table-condensed"><thead><tr><th>Source</th><th class="text-right">Messages</th></tr></thead><tbody id="insight-source-table"></tbody></table></div>
       </div>
     </div>
   </div>
@@ -63,56 +53,14 @@
 </div>
 
 <script>
-function renderInsightChart(activity) {
-  var container = document.getElementById('insight-chart');
-  if (!activity || !activity.length) {
-    container.innerHTML = '<p class="text-muted">No message activity for this period.</p>';
-    return;
-  }
-
-  var width = Math.max(container.clientWidth || 800, 600);
-  var height = 300;
-  var padding = { top: 20, right: 20, bottom: 45, left: 55 };
-  var plotWidth = width - padding.left - padding.right;
-  var plotHeight = height - padding.top - padding.bottom;
-  var max = Math.max.apply(null, activity.map(function (point) { return Number(point.count) || 0; }));
-  if (max < 1) max = 1;
-
-  function x(index) {
-    return padding.left + (activity.length === 1 ? plotWidth / 2 : (index / (activity.length - 1)) * plotWidth);
-  }
-
-  function y(value) {
-    return padding.top + plotHeight - ((Number(value) || 0) / max) * plotHeight;
-  }
-
-  var points = activity.map(function (point, index) {
-    return x(index) + ',' + y(point.count);
-  }).join(' ');
-
-  var labels = '';
-  var labelCount = Math.min(6, activity.length);
-  for (var i = 0; i < labelCount; i++) {
-    var index = labelCount === 1 ? 0 : Math.round(i * (activity.length - 1) / (labelCount - 1));
-    var date = new Date(Number(activity[index].timestamp) * 1000);
-    var label = date.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-    labels += '<text x="' + x(index) + '" y="' + (height - 12) + '" text-anchor="middle" font-size="11" fill="#777">' + label + '</text>';
-  }
-
-  var yLines = '';
-  for (var tick = 0; tick <= 4; tick++) {
-    var value = Math.round(max * tick / 4);
-    var lineY = y(value);
-    yLines += '<line x1="' + padding.left + '" y1="' + lineY + '" x2="' + (width - padding.right) + '" y2="' + lineY + '" stroke="#ddd" />';
-    yLines += '<text x="' + (padding.left - 8) + '" y="' + (lineY + 4) + '" text-anchor="end" font-size="11" fill="#777">' + value + '</text>';
-  }
-
-  container.innerHTML = '<svg width="100%" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="Messages over time">' +
-    yLines +
-    '<line x1="' + padding.left + '" y1="' + (padding.top + plotHeight) + '" x2="' + (width - padding.right) + '" y2="' + (padding.top + plotHeight) + '" stroke="#999" />' +
-    '<polyline points="' + points + '" fill="none" stroke="#337ab7" stroke-width="3" />' +
-    labels +
-    '</svg>';
+function renderInsightTable(selector, rows, label) {
+  var html = '';
+  (rows || []).forEach(function (row) {
+    var value = label(row);
+    html += '<tr><td>' + $('<div>').text(value).html() + '</td><td class="text-right">' + Number(row.count || 0).toLocaleString() + '</td></tr>';
+  });
+  if (!html) html = '<tr><td colspan="2" class="text-muted">No data</td></tr>';
+  $(selector).html(html);
 }
 
 $(function () {
@@ -122,7 +70,13 @@ $(function () {
       $('#insight-addresses').text(data.uniqueAddresses.toLocaleString());
       $('#insight-capcodes').text(data.uniqueCapcodes.toLocaleString());
       $('#insight-source').text(data.topSources.length ? data.topSources[0].source : '—');
-      renderInsightChart(data.activity);
+
+      renderInsightTable('#insight-address-table', data.topAddresses, function (row) { return row.address || '—'; });
+      renderInsightTable('#insight-capcode-table', data.topCapcodes, function (row) {
+        return row.alias || row.address || '—';
+      });
+      renderInsightTable('#insight-source-table', data.topSources, function (row) { return row.source || '—'; });
+      if (typeof renderInsightChart === 'function') renderInsightChart(data.activity);
     })
     .fail(function (xhr) {
       var message = 'Unable to load Insights.';
