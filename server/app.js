@@ -24,6 +24,8 @@ var request = require('request');
 var SQLiteStore = require('connect-sqlite3')(session);
 var flash    = require('connect-flash');
 
+
+
 process.on('SIGINT', function() {
     console.log( "\nGracefully shutting down from SIGINT (Ctrl-C)" );
     process.exit(1);
@@ -98,6 +100,8 @@ var app = express();
     app.set('view engine', 'ejs');
     app.set('trust proxy', 'loopback, linklocal, uniquelocal');
 
+
+
 var server = http.createServer(app);
 var io = require('socket.io').listen(server);
     server.listen(port);
@@ -112,12 +116,20 @@ var io = require('socket.io').listen(server);
 io.sockets.on('connection', function (socket) {
     socket.removeAllListeners();
     debug('client connect to normal socket');
+//    socket.on('echo', function (data) {
+//        io.sockets.emit('message', data);
+//        console.log('message', data);
+//    });
 });
 //Admin Socket
 var adminio = io.of('/adminio');
 adminio.on('connection', function (socket) {
     socket.removeAllListeners();
     debug('client connect to admin socket');
+//    adminio.on('echo', function (data) {
+//        adminio.emit('message', data);
+//        console.log('message', data);
+//    });
 });
 
 app.use(favicon(path.join(__dirname,'themes',theme, 'public', 'favicon.ico')));
@@ -135,15 +147,15 @@ app.use(compression());
 app.use(require("morgan")("combined", { "stream": logger.http.stream }));
 app.use(bodyParser.json({
   limit: '1mb',
-}));
+}));       // to support JSON-encoded bodies
 app.use(bodyParser.urlencoded({     
   extended: true,
   limit: '1mb',
-}));
+})); // to support URL-encoded bodies
 app.use(cookieParser());
 
 var sessSet = {
-    cookie: { maxAge: 7 * 24 * 60 * 60 * 1000 },
+    cookie: { maxAge: 7 * 24 * 60 * 60 * 1000 }, // 1 week
     store: new SQLiteStore,
     saveUninitialized: true,
     resave: 'true',
@@ -155,7 +167,7 @@ if (process.env.HOSTNAME && process.env.USE_COOKIE_HOST)
 
 app.use(session(sessSet));
 app.use(passport.initialize());
-app.use(passport.session());
+app.use(passport.session()); // persistent login sessions
 app.use(flash());
 app.use(express.static(path.join(__dirname,'themes',theme, 'public')));
 app.use('/node_modules', express.static(path.join(__dirname, 'node_modules')));
@@ -165,12 +177,14 @@ app.use(function(req, res, next) {
   next();
 });
 
+
 app.use('/', index);
 app.use('/admin', admin);
 app.use('/post', api);
 app.use('/api', api);
 app.use('/api/insights', insights);
 app.use('/auth', auth);
+
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
@@ -182,12 +196,16 @@ app.use(function(req, res, next) {
 // error handler
 app.use(function(err, req, res, next) {
   var title = nconf.get('global:monitorName') || 'PagerMon';
+  // set locals, only providing error in development
   res.locals.message = err.message;
   res.locals.error = req.app.get('env') === 'development' ? err : {};
+  //these 3 have to be here to stop the error handler shitting up the logs with undefined references when it receives a 500 error ... nfi why
   res.locals.login = req.isAuthenticated();
   res.locals.gaEnable = nconf.get('monitoring:gaEnable');
   res.locals.monitorName = nconf.get("global:monitorName");
   res.locals.register = nconf.get('auth:registration')
+
+  // render the error page
   res.status(err.status || 500);
   res.render(path.join(__dirname,'themes',theme, 'views', 'global', 'error'), { title: title });
 });
@@ -196,8 +214,11 @@ app.use(function(err, req, res, next) {
 var dbtype = nconf.get('database:type')
 if (dbtype == 'mysql') {
   const cronvalidate = require('cron-validator');
+  // Get CRON from config
   var cronartime = nconf.get('database:aliasRefreshInterval');
+  //If value is falsy (undefined, empty, null etc), set as default
   if (!cronartime){cronartime = "0 5,35 * * * *";}
+  //Check value isn't garbage, for example 0 90 * * * *
   if (!cronvalidate.isValidCron(cronartime,{ seconds: true })) {
     logger.main.warn('CRON: Invalid CRON configuration in config file. Defaulting to: "0 5,35 * * * *" ')
     cronartime = "0 5,35 * * * *";
@@ -243,14 +264,30 @@ module.exports = app;
 
 function normalizePort(val) {
   var port = parseInt(val, 10);
-  if (isNaN(port)) return val;
-  if (port >= 0) return port;
+
+  if (isNaN(port)) {
+    // named pipe
+    return val;
+  }
+
+  if (port >= 0) {
+    // port number
+    return port;
+  }
+
   return false;
 }
 
 function onError(error) {
-  if (error.syscall !== 'listen') throw error;
-  var bind = typeof port === 'string' ? 'Pipe ' + port : 'Port ' + port;
+  if (error.syscall !== 'listen') {
+    throw error;
+  }
+
+  var bind = typeof port === 'string'
+    ? 'Pipe ' + port
+    : 'Port ' + port;
+
+  // handle specific listen errors with friendly messages
   switch (error.code) {
     case 'EACCES':
       console.error(bind + ' requires elevated privileges');
@@ -269,28 +306,37 @@ function checkForDbDriver(driver) {
   switch (driver) {
     /* eslint-disable import/no-extraneous-dependencies, global-require */
     case 'sqlite3': {
-      try { require('sqlite3'); }
-      catch (e) {
+      try {
+        require('sqlite3');
+      } catch (e) {
         logger.main.error(`Selected database type is sqlite3, but npm package sqlite3 was not installed.`);
-        logger.main.error(`Please run npm i sqlite3 to install or refer to https://www.npmjs.com/package/sqlite3 for reference`);
+        logger.main.error(
+          `Please run npm i sqlite3 to install or refer to https://www.npmjs.com/package/sqlite3 for reference`
+        );
         process.exit(1);
       }
       break;
     }
     case 'mysql': {
-      try { require('knex'); }
-      catch (e) {
+      try {
+        require('knex');
+      } catch (e) {
         logger.main.error(`Selected database type is mysql, but npm package knex was not installed.`);
-        logger.main.error(`Please run npm i knex to install or refer to https://www.npmjs.com/package/knex for reference`);
+        logger.main.error(
+          `Please run npm i knex to install or refer to https://www.npmjs.com/package/knex for reference`
+        );
         process.exit(1);
       }
       break;
     }
     case 'oracledb': {
-      try { require('oracledb'); }
-      catch (e) {
+      try {
+        require('oracledb');
+      } catch (e) {
         logger.main.error(`Selected database type is oracledb, but npm package oracledb was not installed.`);
-        logger.main.error(`Please run npm i oracledb to install or refer to https://www.npmjs.com/package/oracledb for reference`);
+        logger.main.error(
+          `Please run npm i oracledb to install or refer to https://www.npmjs.com/package/oracledb for reference`
+        );
         process.exit(1);
       }
       break;
@@ -303,8 +349,11 @@ function checkForDbDriver(driver) {
   /* eslint-enable import/no-extraneous-dependencies, global-require */
 }
 
+
 function onListening() {
   var addr = server.address();
-  var bind = typeof addr === 'string' ? 'pipe ' + addr : 'port ' + addr.port;
-  logger.main.info('Listening on ' + bind);
+  var bind = typeof addr === 'string'
+    ? 'pipe ' + addr
+    : 'port ' + addr.port;
+    logger.main.info('Listening on ' + bind);
 }
