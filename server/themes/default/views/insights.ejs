@@ -1,19 +1,39 @@
 <!DOCTYPE html>
 <html lang="en">
 <% include global/header.ejs %>
+<style>
+  #insights-body .insight-toolbar { margin-top: 20px; }
+  #insights-body .insight-controls { text-align: right; }
+  #insights-body .insight-controls .btn-group { margin-right: 4px; }
+  #insights-body .insight-custom-form .form-group { margin-bottom: 0; }
+  #insights-body #insight-chart { min-height: 300px; }
+  @media (max-width: 767px) {
+    #insights-body .insight-toolbar { margin-top: 10px; }
+    #insights-body .insight-title { float: none !important; }
+    #insights-body .insight-controls { float: none !important; text-align: left; margin-top: 15px; }
+    #insights-body .insight-controls .btn-group { display: inline-flex; margin-bottom: 5px; }
+    #insights-body .insight-controls .btn { padding-left: 10px; padding-right: 10px; }
+    #insights-body .insight-custom-form .form-group { display: block; margin: 0 0 10px 0 !important; }
+    #insights-body .insight-custom-form .form-control { width: 100%; }
+    #insights-body .insight-custom-form .btn { margin-left: 0 !important; width: 100%; }
+    #insights-body #insight-chart { min-height: 240px; }
+    #insights-body #insight-chart svg { min-width: 0 !important; }
+    #insights-body .table-responsive { border: 0; margin-bottom: 0; }
+  }
+</style>
 </head>
 <body id="insights-body">
 <% include global/menu.ejs %>
 
-<div id="content" class="container-fluid" style="margin-top: 20px;">
+<div id="content" class="container-fluid insight-toolbar">
   <div class="row">
     <div class="col-xs-12">
       <div class="clearfix">
-        <div class="pull-left">
+        <div class="pull-left insight-title">
           <h2><i class="fa fa-line-chart"></i> PagerMon Insights</h2>
           <p class="text-muted">Message activity for the selected period.</p>
         </div>
-        <div class="pull-right" style="margin-top: 20px;">
+        <div class="pull-right insight-controls">
           <div class="btn-group" role="group" aria-label="Insights date range">
             <button type="button" class="btn btn-default insight-range" data-days="1">24 hours</button>
             <button type="button" class="btn btn-default insight-range" data-days="7">7 days</button>
@@ -23,7 +43,7 @@
         </div>
       </div>
       <div id="insight-custom" class="well well-sm" style="display:none; margin-top:15px;">
-        <form class="form-inline" id="insight-custom-form">
+        <form class="form-inline insight-custom-form" id="insight-custom-form">
           <div class="form-group"><label for="insight-start" style="margin-right:6px;">From</label><input type="datetime-local" class="form-control" id="insight-start"></div>
           <div class="form-group" style="margin-left:10px;"><label for="insight-end" style="margin-right:6px;">To</label><input type="datetime-local" class="form-control" id="insight-end"></div>
           <button type="submit" class="btn btn-primary" style="margin-left:10px;">Apply</button>
