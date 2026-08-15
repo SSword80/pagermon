@@ -71,6 +71,13 @@ router.get('/', authHelper.isLoggedInMessages, function (req, res) {
       .orderBy('count', 'desc')
       .limit(10),
     messages.clone()
+      .leftJoin('capcodes', 'capcodes.id', 'messages.alias_id')
+      .select(db.raw("COALESCE(NULLIF(capcodes.agency, ''), 'UNKNOWN') as agency"))
+      .count('messages.id as count')
+      .groupBy(db.raw("COALESCE(NULLIF(capcodes.agency, ''), 'UNKNOWN')"))
+      .orderBy('count', 'desc')
+      .limit(10),
+    messages.clone()
       .select('messages.source')
       .count('messages.id as count')
       .groupBy('messages.source')
@@ -85,8 +92,9 @@ router.get('/', authHelper.isLoggedInMessages, function (req, res) {
       uniqueCapcodes: Number(results[2][0].count || 0),
       topAddresses: results[3],
       topCapcodes: results[4],
-      topSources: results[5],
-      activity: buildActivity(results[6], range.start, range.end)
+      topAgencies: results[5],
+      topSources: results[6],
+      activity: buildActivity(results[7], range.start, range.end)
     });
   }).catch(function (err) {
     res.status(500).json({ error: 'Unable to calculate insights' });
