@@ -60,8 +60,13 @@ function buildAnomaly(activity, livePulseCount) {
     : Math.round(((current - baseline) / baseline) * 1000) / 10;
 
   var status = 'normal';
-  if (current >= baseline * 1.5) status = 'spike';
-  else if (current <= baseline * 0.5) status = 'drop';
+  if (baseline === 0) {
+    status = current > 0 ? 'spike' : 'normal';
+  } else if (current >= baseline * 1.5) {
+    status = 'spike';
+  } else if (current <= baseline * 0.5) {
+    status = 'drop';
+  }
 
   return {
     status: status,
