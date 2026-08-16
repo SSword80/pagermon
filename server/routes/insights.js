@@ -61,6 +61,8 @@ router.get('/', authHelper.isLoggedInMessages, function (req, res) {
   var duration = range.end - range.start;
   var previousRange = { start: range.start - duration, end: range.start };
   var messages = db('messages').where('timestamp', '>=', range.start).andWhere('timestamp', '<=', range.end);
+  var livePulseStart = Math.floor(Date.now() / 1000) - (60 * 60);
+  var livePulse = db('messages').where('timestamp', '>=', livePulseStart).andWhere('timestamp', '<=', Math.floor(Date.now() / 1000));
   var previousMessages = db('messages').where('timestamp', '>=', previousRange.start).andWhere('timestamp', '<', previousRange.end);
 
   Promise.all([
@@ -75,10 +77,11 @@ router.get('/', authHelper.isLoggedInMessages, function (req, res) {
     messages.clone().select('timestamp'),
     previousMessages.clone().count('* as count'),
     previousMessages.clone().leftJoin('capcodes', 'capcodes.id', 'messages.alias_id').select(db.raw("COALESCE(NULLIF(capcodes.agency, ''), 'UNKNOWN') as agency")).count('messages.id as count').groupBy(db.raw("COALESCE(NULLIF(capcodes.agency, ''), 'UNKNOWN')")),
-    previousMessages.clone().select(db.raw("COALESCE(NULLIF(messages.protocol, ''), 'UNKNOWN') as protocol")).count('messages.id as count').groupBy(db.raw("COALESCE(NULLIF(messages.protocol, ''), 'UNKNOWN')"))
+    previousMessages.clone().select(db.raw("COALESCE(NULLIF(messages.protocol, ''), 'UNKNOWN') as protocol")).count('messages.id as count').groupBy(db.raw("COALESCE(NULLIF(messages.protocol, ''), 'UNKNOWN')")),
+    livePulse.clone().count('* as count')
   ]).then(function (results) {
     var activity = buildActivity(results[8], range.start, range.end);
-    res.status(200).json({ range: range, messages: Number(results[0][0].count || 0), uniqueAddresses: Number(results[1][0].count || 0), uniqueCapcodes: Number(results[2][0].count || 0), topAddresses: results[3], topCapcodes: results[4], topAgencies: results[5], topSources: results[6], topProtocols: results[7], activity: activity, peakActivity: buildPeakActivity(activity), trends: { period: buildTrend(results[0][0].count, results[9][0].count), agencies: buildCategoryTrends(results[5], results[10], 'agency'), protocols: buildCategoryTrends(results[7], results[11], 'protocol') } });
+    res.status(200).json({ range: range, messages: Number(results[0][0].count || 0), uniqueAddresses: Number(results[1][0].count || 0), uniqueCapcodes: Number(results[2][0].count || 0), topAddresses: results[3], topCapcodes: results[4], topAgencies: results[5], topSources: results[6], topProtocols: results[7], livePulse: { count: Number(results[12][0].count || 0) }, activity: activity, peakActivity: buildPeakActivity(activity), trends: { period: buildTrend(results[0][0].count, results[9][0].count), agencies: buildCategoryTrends(results[5], results[10], 'agency'), protocols: buildCategoryTrends(results[7], results[11], 'protocol') } });
   }).catch(function (err) { res.status(500).json({ error: 'Unable to calculate insights' }); });
 });
 

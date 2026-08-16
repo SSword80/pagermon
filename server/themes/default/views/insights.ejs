@@ -32,6 +32,12 @@
   #insights-body .heatmap-swatch.level-2 { background: #9acfea; }
   #insights-body .heatmap-swatch.level-3 { background: #5bc0de; }
   #insights-body .heatmap-swatch.level-4 { background: #337ab7; }
+  #insights-body .insight-live-pulse { border-left: 4px solid #777; }
+  #insights-body .insight-live-pulse.active { border-left-color: #3c763d; }
+  #insights-body .insight-live-pulse.quiet { border-left-color: #f0ad4e; }
+  #insights-body .insight-live-pulse.inactive { border-left-color: #999; }
+  #insights-body .insight-live-pulse-label { font-size: 16px; font-weight: 600; }
+  #insights-body .insight-live-pulse-count { font-size: 30px; font-weight: 600; margin: 4px 0; }
   #insights-body .insight-trend-value { font-size: 14px; font-weight: 600; white-space: nowrap; }
   #insights-body .insight-trend-value.up { color: #3c763d; }
   #insights-body .insight-trend-value.down { color: #a94442; }
@@ -96,6 +102,18 @@
     <div class="col-sm-6 col-md-3"><div class="panel panel-default"><div class="panel-body text-center"><div class="text-muted">Unique addresses</div><div id="insight-addresses" class="h2">—</div></div></div></div>
     <div class="col-sm-6 col-md-3"><div class="panel panel-default"><div class="panel-body text-center"><div class="text-muted">Unique capcodes</div><div id="insight-capcodes" class="h2">—</div></div></div></div>
     <div class="col-sm-6 col-md-3"><div class="panel panel-default"><div class="panel-body text-center"><div class="text-muted">Top agency</div><div id="insight-source" class="h2">—</div></div></div></div>
+  </div>
+
+  <div class="row">
+    <div class="col-xs-12">
+      <div class="panel panel-default insight-live-pulse">
+        <div class="panel-body text-center">
+          <div id="insight-live-pulse-label" class="insight-live-pulse-label">⚪ Live Pulse</div>
+          <div id="insight-live-pulse-count" class="insight-live-pulse-count">—</div>
+          <div class="text-muted">messages in the last hour</div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="row">
@@ -326,6 +344,21 @@ function renderPeakActivity(peak) {
   $('#insight-average-hour').text(Number(peak.averagePerHour || 0).toLocaleString());
 }
 
+function renderLivePulse(pulse) {
+  var count = Number(pulse && pulse.count || 0);
+  var status = count > 0 ? 'active' : 'inactive';
+  var label = count > 0 ? '🟢 Live Pulse' : '⚪ Live Pulse';
+
+  if (count > 0 && count < 10) {
+    status = 'quiet';
+    label = '🟡 Live Pulse';
+  }
+
+  $('#insight-live-pulse-count').text(count.toLocaleString());
+  $('#insight-live-pulse-label').text(label);
+  $('.insight-live-pulse').removeClass('active quiet inactive').addClass(status);
+}
+
 function loadInsights() {
   var range = insightRange();
   $.getJSON('/api/insights?start=' + range.start + '&end=' + range.end)
@@ -334,6 +367,7 @@ function loadInsights() {
       $('#insight-addresses').text(data.uniqueAddresses.toLocaleString());
       $('#insight-capcodes').text(data.uniqueCapcodes.toLocaleString());
       $('#insight-source').text(data.topAgencies.length ? data.topAgencies[0].agency || 'UNKNOWN' : 'UNKNOWN');
+      renderLivePulse(data.livePulse);
       renderInsightChart(data.activity);
       renderPeakActivity(data.peakActivity);
       renderActivityHeatmap(data.activity);
