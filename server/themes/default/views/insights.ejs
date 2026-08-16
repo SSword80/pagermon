@@ -49,6 +49,70 @@
   #insights-body .heatmap-swatch.level-2 { background: #9acfea; }
   #insights-body .heatmap-swatch.level-3 { background: #5bc0de; }
   #insights-body .heatmap-swatch.level-4 { background: #337ab7; }
+  #insights-body #insight-live-feed {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    gap: 0;
+    padding: 0;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+  #insights-body #insight-live-feed::-webkit-scrollbar {
+    height: 10px;
+  }
+  #insights-body #insight-live-feed::-webkit-scrollbar-track {
+    background: #f5f5f5;
+  }
+  #insights-body #insight-live-feed::-webkit-scrollbar-thumb {
+    background: #aaa;
+    border-radius: 5px;
+  }
+  #insights-body .insight-live-item {
+    flex: 0 0 420px;
+    width: 420px;
+    min-height: 82px;
+    margin: 0;
+    padding: 10px;
+    border: 0;
+    border-right: 1px solid #ccc;
+    border-radius: 0;
+    background: #f5f5f5;
+    text-align: left;
+    color: inherit;
+    cursor: pointer;
+    white-space: normal;
+  }
+  #insights-body .insight-live-item:hover,
+  #insights-body .insight-live-item:focus {
+    background: #e9e9e9;
+    outline: none;
+  }
+  #insights-body .insight-live-item + .insight-live-item {
+    border-left: 0;
+  }
+  #insights-body .insight-live-time {
+    display: inline-block;
+    margin-right: 6px;
+    color: #777;
+    font-size: 12px;
+  }
+  #insights-body .insight-live-agency {
+    font-weight: 600;
+  }
+  #insights-body .insight-live-address {
+    color: #777;
+    margin-left: 6px;
+  }
+  #insights-body .insight-live-message {
+    margin-top: 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   #insights-body .insight-live-pulse { border-left: 4px solid #777; }
   #insights-body .insight-live-pulse.active { border-left-color: #3c763d; }
   #insights-body .insight-live-pulse.quiet { border-left-color: #f0ad4e; }
@@ -429,11 +493,15 @@ function renderLiveMessage(message, isNew) {
   var alias = message.alias || '';
   var address = message.address || '—';
   var source = message.source || '';
-
+  var protocol = message.protocol || '';
   var title = agency;
+
   if (alias) title += ' — ' + alias;
 
-  var html = '<div class="insight-live-item' + (isNew ? ' new' : '') + '">' +
+  var html = '<button type="button" class="insight-live-item' +
+    (isNew ? ' new' : '') +
+    '" data-insight-message-id="' + escapeInsightHtml(message.id || '') +
+    '" data-insight-timestamp="' + escapeInsightHtml(message.timestamp || '') + '">' +
     '<div>' +
       '<span class="insight-live-time">' + escapeInsightHtml(time) + '</span>' +
       '<span class="insight-live-agency">' + escapeInsightHtml(title) + '</span>' +
@@ -443,9 +511,64 @@ function renderLiveMessage(message, isNew) {
       escapeInsightHtml(message.message || 'No message text') +
     '</div>' +
     (source ? '<div class="text-muted" style="font-size:11px;">' + escapeInsightHtml(source) + '</div>' : '') +
-  '</div>';
+    (protocol ? '<div class="text-muted" style="font-size:11px;">' + escapeInsightHtml(protocol) + '</div>' : '') +
+  '</button>';
 
   return html;
+}
+
+function showLiveInsightMessage(message) {
+  var panel = document.getElementById('insight-message-detail');
+  var summary = document.getElementById('insight-message-detail-summary');
+  var content = document.getElementById('insight-message-detail-content');
+
+  if (!panel || !summary || !content) return;
+
+  var timestamp = Number(message.timestamp);
+  var date = timestamp ? new Date(timestamp * 1000) : null;
+
+  var time = date ? date.toLocaleString([], {
+    weekday: 'short',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  }) : 'Unknown';
+
+  var agency = message.agency || 'UNKNOWN';
+  var alias = message.alias || '—';
+  var address = message.address || '—';
+  var source = message.source || '—';
+  var protocol = message.protocol || '—';
+
+  summary.innerHTML =
+    '<strong>' + escapeInsightHtml(agency) + '</strong> · ' +
+    escapeInsightHtml(address);
+
+  content.innerHTML =
+    '<div class="row">' +
+      '<div class="col-sm-6"><strong>Address</strong><br>' + escapeInsightHtml(address) + '</div>' +
+      '<div class="col-sm-6"><strong>Agency</strong><br>' + escapeInsightHtml(agency) + '</div>' +
+    '</div>' +
+    '<div class="row" style="margin-top:12px;">' +
+      '<div class="col-sm-6"><strong>Alias</strong><br>' + escapeInsightHtml(alias) + '</div>' +
+      '<div class="col-sm-6"><strong>Protocol</strong><br>' + escapeInsightHtml(protocol) + '</div>' +
+    '</div>' +
+    '<div class="row" style="margin-top:12px;">' +
+      '<div class="col-sm-6"><strong>Source</strong><br>' + escapeInsightHtml(source) + '</div>' +
+      '<div class="col-sm-6"><strong>Time</strong><br>' + escapeInsightHtml(time) + '</div>' +
+    '</div>' +
+    '<div style="margin-top:16px;">' +
+      '<strong>Message</strong>' +
+      '<div class="well" style="margin-top:8px; margin-bottom:0; white-space:pre-wrap;">' +
+        escapeInsightHtml(message.message || 'No message text') +
+      '</div>' +
+    '</div>';
+
+  panel.style.display = '';
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function addLiveInsightMessage(message) {
@@ -467,6 +590,45 @@ function addLiveInsightMessage(message) {
     if (first) first.classList.remove('new');
   }, 1200);
 }
+
+function bindLiveInsightClicks() {
+  var container = document.getElementById('insight-live-feed');
+  if (!container || container.dataset.clickBound === 'true') return;
+
+  container.dataset.clickBound = 'true';
+
+  container.addEventListener('click', function (event) {
+    var item = event.target.closest('.insight-live-item');
+    if (!item) return;
+
+    var timestamp = Number(item.getAttribute('data-insight-timestamp'));
+
+    if (!timestamp) return;
+
+    var start = timestamp - 2;
+    var end = timestamp + 2;
+
+    $.getJSON('/api/insights/messages?start=' + start + '&end=' + end)
+      .done(function (data) {
+        if (data.messages && data.messages.length) {
+          var message = data.messages[0];
+
+          for (var i = 0; i < data.messages.length; i++) {
+            if (Number(data.messages[i].id) === Number(item.getAttribute('data-insight-message-id'))) {
+              message = data.messages[i];
+              break;
+            }
+          }
+
+          showLiveInsightMessage(message);
+        }
+      })
+      .fail(function () {
+        console.log('Unable to load live message details.');
+      });
+  });
+}
+
 
 function renderActivityHeatmap(activity) {
   var container = document.getElementById('insight-heatmap');
@@ -694,6 +856,10 @@ function loadInsights() {
 }
 
 $(function () {
+  $('#insight-message-detail-close').on('click', function () {
+    $('#insight-message-detail').hide();
+  });
+
   $('.insight-range').on('click', function () {
     insightCustomRange = null;
     insightDays = Number($(this).data('days'));
@@ -726,6 +892,7 @@ $(function () {
   });
 
   $('.insight-range[data-days="1"]').addClass('active');
+  bindLiveInsightClicks();
   connectInsightLiveFeed();
   loadInsights();
 });
