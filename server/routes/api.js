@@ -390,7 +390,7 @@ router.route('/messages')
                                         req.io.emit('messagePost', rowuser);
                                       }
                                     } else {
-                                      //If AdminShow not on only send if not null alias_id
+                                      // if AdminShow not on only send if not null alias_id
                                       if (row.alias_id != null) {
                                         req.io.of('adminio').emit('messagePost', row);
                                         rowuser = {
@@ -425,44 +425,61 @@ router.route('/messages')
                                     req.io.emit('messagePost', rowuser);
                                   }
                                 } else {
-                                  req.io.of('adminio').emit('messagePost', row);
-                                  req.io.emit('messagePost', row);
+                                  if (pdwMode) {
+                                    if (adminShow) {
+                                      //If PDWMode on and AdminShow is on send always
+                                      req.io.of('adminio').emit('messagePost', row);
+                                      if (row.alias_id != null) {
+                                        // send to normal user as well if not null alias_id
+                                        req.io.emit('messagePost', row);
+                                      }
+                                    } else {
+                                      // if AdminShow not on only send if not null alias_id
+                                      if (row.alias_id != null) {
+                                        req.io.of('adminio').emit('messagePost', row);
+                                        req.io.emit('messagePost', row);
+                                      }
+                                    }
+                                  } else {
+                                    req.io.of('adminio').emit('messagePost', row);
+                                    req.io.emit('messagePost', row);
+                                  }
                                 }
                               });
-                            } else {
-                              logger.main.info('empty results');
                             }
+                            res.status(200).send('' + result);
                           })
                           .catch((err) => {
-                            logger.main.error(err);
-                          });
+                            res.status(500).send(err);
+                            logger.main.error(err)
+                          })
                       })
                       .catch((err) => {
-                        logger.main.error(err);
-                      });
-                    res.status(200);
-                    res.send(msgId.toString());
+                        res.status(500).send(err);
+                        logger.main.error(err)
+                      })
                   } else {
                     res.status(200);
-                    res.send('Ignored');
+                    res.send('Ignoring filtered');
                   }
                 })
                 .catch((err) => {
-                  logger.main.error(err);
-                });
+                  res.status(500).send(err);
+                  logger.main.error(err)
+                })
             }
           })
           .catch((err) => {
-            logger.main.error(err);
-          });
-      }
+            res.status(500).send(err);
+            logger.main.error(err)
+          })
+      })
     } else {
-      res.status(500);
-      res.send('Error - address or message missing');
+      res.status(500).json({ message: 'Error - address or message missing' });
     }
   });
 
-// GET a message by ID
+
 router.route('/messages/:id')
   .get(authHelper.isLoggedInMessages, function (req, res, next) {
     nconf.load();
@@ -470,6 +487,7 @@ router.route('/messages/:id')
     var HideCapcode = nconf.get('messages:HideCapcode');
     var apiSecurity = nconf.get('messages:apiSecurity');
     var id = req.params.id;
+
     db.from('messages')
       .select('messages.*', 'capcodes.alias', 'capcodes.agency', 'capcodes.icon', 'capcodes.color', 'capcodes.ignore', db.raw('CASE WHEN NOT capcodes.address = messages.address THEN 1 ELSE 0 END as wildcard'))
       .leftJoin('capcodes', 'capcodes.id', '=', 'messages.alias_id')
@@ -491,29 +509,972 @@ router.route('/messages/:id')
             };
           }
         }
-        res.status(200);
-        res.json(row);
+        if (row.ignore == 1) {
+          res.status(200).json({});
+        } else {
+          if (pdwMode && !row.alias) {
+            res.status(200).json({});
+          } else {
+            res.status(200).json(row);
+          }
+        }
       })
-      .catch(function (err) {
-        logger.main.error(err);
-        return next(err);
-      });
+      .catch((err) => {
+        res.status(500).send(err);
+      })
   });
 
-// Get all the messages
-router.route('/messages/all/:id')
+router.route('/messageSearch')
   .get(authHelper.isLoggedInMessages, function (req, res, next) {
     nconf.load();
-    var id = req.params.id;
-    db.from('messages')
-      .select('messages.*', 'capcodes.alias', 'capcodes.agency', 'capcodes.icon', 'capcodes.color', 'capcodes.ignore', db.raw('CASE WHEN NOT capcodes.address = messages.address THEN 1 ELSE 0 END as wildcard'))
-      .where('messages.id', '>', id)
+    console.time('init');
+    var dbtype = nconf.get('database:type');
+    var pdwMode = nconf.get('messages:pdwMode');
+    var adminShow = nconf.get('messages:adminShow');
+    var maxLimit = nconf.get('messages:maxLimit');
+    var HideCapcode = nconf.get('messages:HideCapcode');
+    var apiSecurity = nconf.get('messages:apiSecurity');
+    var defaultLimit = nconf.get('messages:defaultLimit');
+    initData.replaceText = nconf.get('messages:replaceText');
+
+    if (typeof req.query.page !== 'undefined') {
+      var page = parseInt(req.query.page, 10);
+      if (page > 0) {
+        initData.currentPage = page - 1;
+      } else {
+        initData.currentPage = 0;
+      }
+    }
+    if (req.query.limit && req.query.limit <= maxLimit) {
+      initData.limit = parseInt(req.query.limit, 10);
+    } else {
+      initData.limit = parseInt(defaultLimit, 10);
+    }
+
+    var rowCount;
+    var query;
+    var agency;
+    var address;
+    var alias;
+    // dodgy handling for unexpected results
+    if (typeof req.query.q !== 'undefined') {
+      query = req.query.q;
+    } else { query = ''; }
+    if (typeof req.query.agency !== 'undefined') {
+      agency = req.query.agency;
+    } else { agency = ''; }
+    if (typeof req.query.address !== 'undefined') {
+      address = req.query.address;
+    } else { address = ''; }
+    if (typeof req.query.alias !== 'undefined') {
+      alias = req.query.alias;
+    } else { alias = ''; }
+
+    // set select commands based on query type
+
+    var data = []
+    console.time('sql')
+    db.select('messages.*', 'capcodes.alias', 'capcodes.agency', 'capcodes.icon', 'capcodes.color', 'capcodes.ignore', db.raw('CASE WHEN NOT capcodes.address = messages.address THEN 1 ELSE 0 END as wildcard'))
+      .modify(function (qb) {
+        if (dbtype == 'sqlite3' && query != '') {
+          qb.from('messages_search_index')
+            .leftJoin('messages', 'messages.id', '=', 'messages_search_index.rowid')
+        } else {
+          qb.from('messages');
+        }
+        if (pdwMode) {
+          if (adminShow && req.isAuthenticated() && req.user.role == 'admin') {
+            qb.leftJoin('capcodes', 'capcodes.id', '=', 'messages.alias_id');
+          } else {
+            qb.innerJoin('capcodes', 'capcodes.id', '=', 'messages.alias_id');
+          }
+        } else {
+          qb.leftJoin('capcodes', 'capcodes.id', '=', 'messages.alias_id');
+        }
+        if (dbtype == 'sqlite3' && query != '') {
+          qb.whereRaw('messages_search_index MATCH ?', query)
+        } else if (dbtype == 'mysql' && query != '') {
+          //This wraps the search query in quotes so MySQL searches for the complete term rather than individual words.
+          query = '"' + query + '"'
+          qb.whereRaw(`MATCH(messages.message, messages.address, messages.source) AGAINST (? IN BOOLEAN MODE)`, query)
+        } else if (dbtype == 'oracledb' && query != '') {
+          qb.whereRaw(`CONTAINS("messages"."message", ?, 1) > 0`, query)
+        } else {
+          if (address != '')
+            qb.where('messages.address', 'LIKE', address).orWhere('messages.source', address);
+          if (agency != '')
+            qb.whereIn('messages.alias_id', function (qb2) {
+              qb2.select('id').from('capcodes').where('agency', agency).where('ignore', 0);
+          })
+          if (alias != '')
+            qb.where('messages.alias_id',alias);
+        }
+      }).orderBy('messages.timestamp', 'desc')
       .then((rows) => {
-        res.status(200).json(rows);
+        if (rows) {
+          for (row of rows) {
+            if (HideCapcode) {
+              if (!req.isAuthenticated() || (req.isAuthenticated() && req.user.role == 'user')) {
+                row = {
+                  "id": row.id,
+                  "message": row.message,
+                  "source": row.source,
+                  "timestamp": row.timestamp,
+                  "alias_id": row.alias_id,
+                  "alias": row.alias,
+                  "agency": row.agency,
+                  "icon": row.icon,
+                  "color": row.color,
+                  "ignore": row.ignore
+                };
+              }
+            }
+            if (pdwMode) {
+              if (adminShow && req.isAuthenticated() && req.user.role == 'admin' && !row.ignore || row.ignore == 0) {
+                data.push(row);
+              } else {
+                if (row.ignore == 0)
+                  data.push(row);
+              }
+            } else {
+              if (!row.ignore || row.ignore == 0)
+                data.push(row);
+            }
+          }
+        } else {
+          logger.main.info('empty results');
+        }
+        rowCount = data.length
+        if (rowCount > 0) {
+          console.timeEnd('sql');
+          var result = data;
+          console.time('initEnd');
+          initData.msgCount = result.length;
+          initData.pageCount = Math.ceil(initData.msgCount / initData.limit);
+          if (initData.currentPage > initData.pageCount) {
+            initData.currentPage = 0;
+          }
+          initData.offset = initData.limit * initData.currentPage;
+          if (initData.offset < 0) {
+            initData.offset = 0;
+          }
+          initData.offsetEnd = initData.offset + initData.limit;
+          var limitResults = result.slice(initData.offset, initData.offsetEnd);
+          console.timeEnd('initEnd');
+          res.json({ 'init': initData, 'messages': limitResults });
+        } else {
+          console.timeEnd('sql');
+          res.status(200).json({ 'init': {}, 'messages': [] });
+        }
       })
-      .catch(function (err) {
+      .catch((err) => {
+        console.timeEnd('sql');
         logger.main.error(err);
-        return next(err);
-      });
+        res.status(500).send(err);
+      })
   });
 
+router.route('/capcodes/init')
+// DISABLED - UNKNOWN WHAT THIS WAS USED FOR 
+/*  
+  .get(authHelper.isAdmin, function (req, res, next) {
+    //set current page if specifed as get variable (eg: /?page=2)
+    if (typeof req.query.page !== 'undefined') {
+      var page = parseInt(req.query.page, 10);
+      if (page > 0)
+        initData.currentPage = page - 1;
+    }
+    db.from('capcodes')
+      .select('id')
+      .orderBy('id', 'desc')
+      .limit(1)
+      .then((row) => {
+        initData.msgCount = parseInt(row['id'], 10);
+        //console.log(initData.msgCount);
+        initData.pageCount = Math.ceil(initData.msgCount / initData.limit);
+        var offset = initData.limit * initData.currentPage;
+        initData.offset = initData.msgCount - offset;
+        if (initData.offset < 0) {
+          initData.offset = 0;
+        }
+        res.json(initData);
+      })
+      .catch((err) => {
+        logger.main.error(err);
+        return next(err);
+      })
+  });
+*/
+router.route('/capcodes')
+  .get(authHelper.isAdmin, function (req, res, next) {
+    nconf.load();
+    var dbtype = nconf.get('database:type');
+    db.from('capcodes')
+      .select('*')
+      .modify(function (queryBuilder) {
+        if (dbtype == 'oracledb')
+          queryBuilder.orderByRaw(`REPLACE("address", '_', '%')`);
+        else
+          queryBuilder.orderByRaw(`REPLACE(address, '_', '%')`)
+      })
+      .then((rows) => {
+        res.json(rows);
+      })
+      .catch((err) => {
+        logger.main.error(err);
+        return next(err);
+      })
+  })
+  .post(authHelper.isAdmin, function (req, res, next) {
+    nconf.load();
+    var updateRequired = nconf.get('database:aliasRefreshRequired');
+    if (req.body.address && req.body.alias) {
+      var id = req.body.id || null;
+      var address = req.body.address || 0;
+      var alias = req.body.alias || 'null';
+      var agency = req.body.agency || 'null';
+      var color = req.body.color || 'black';
+      var icon = req.body.icon || 'question';
+      var ignore = req.body.ignore || 0;
+      var pluginconf = JSON.stringify(req.body.pluginconf) || "{}";
+      db.from('capcodes')
+        .where('id', '=', id)
+        .modify(function (queryBuilder) {
+          if (id == null) {
+            queryBuilder.insert({
+              id: id,
+              address: address,
+              alias: alias,
+              agency: agency,
+              color: color,
+              icon: icon,
+              ignore: ignore,
+              pluginconf: pluginconf
+            })
+          } else {
+            queryBuilder.update({
+              id: id,
+              address: address,
+              alias: alias,
+              agency: agency,
+              color: color,
+              icon: icon,
+              ignore: ignore,
+              pluginconf: pluginconf
+            })
+          }
+        })
+        .returning('id')
+        .then((result) => {
+          res.status(200);
+          res.send('' + result);
+          if (!updateRequired || updateRequired == 0) {
+            nconf.set('database:aliasRefreshRequired', 1);
+            nconf.save();
+          }
+        })
+        .catch((err) => {
+          logger.main.error(err)
+            .status(500).send(err);
+        })
+      logger.main.debug(util.format('%o', req.body || 'no request body'));
+    } else {
+      res.status(500).json({ message: 'Error - address or alias missing' });
+    }
+  });
+
+router.route('/capcodes/agency')
+  .get(authHelper.isAdmin, function (req, res, next) {
+    db.from('capcodes')
+      .distinct('agency')
+      .then((rows) => {
+        res.status(200);
+        res.json(rows);
+      })
+      .catch((err) => {
+        res.status(500);
+        res.send(err);
+      })
+  });
+
+router.route('/capcodes/agency/:id')
+  .get(authHelper.isAdmin, function (req, res, next) {
+    var id = req.params.id;
+    db.from('capcodes')
+      .select('*')
+      .where('agency', 'like', id)
+      .then((rows) => {
+        res.status(200);
+        res.json(rows);
+      })
+      .catch((err) => {
+        logger.main.error(err);
+        return next(err);
+      })
+  });
+
+router.route('/capcodes/:id')
+  .get(authHelper.isAdmin, function (req, res, next) {
+    var id = req.params.id;
+    var defaults = {
+      "id": "",
+      "address": "",
+      "alias": "",
+      "agency": "",
+      "icon": "question",
+      "color": "black",
+      "ignore": 0,
+      "pluginconf": {}
+    };
+    if (id == 'new') {
+      res.status(200);
+      res.json(defaults);
+    } else {
+      db.from('capcodes')
+        .select('*')
+        .where('id', id)
+        .then(function (row) {
+          if (row.length > 0) {
+            row = row[0]
+            row.pluginconf = parseJSON(row.pluginconf);
+            res.status(200);
+            res.json(row);
+          } else {
+            res.status(200);
+            res.json(defaults);
+          }
+        })
+        .catch((err) => {
+          logger.main.error(err);
+          return next(err);
+        })
+    }
+  })
+  .post(authHelper.isAdmin, function (req, res, next) {
+    var dbtype = nconf.get('database:type');
+    var id = req.params.id || req.body.id || null;
+    nconf.load();
+    var updateRequired = nconf.get('database:aliasRefreshRequired');
+    if (id == 'deleteMultiple') {
+      // do delete multiple
+      var idList = req.body.deleteList || [0, 0];
+      if (!idList.some(isNaN)) {
+        logger.main.info('Deleting: ' + idList);
+        db.from('capcodes')
+          .del()
+          .where('id', 'in', idList)
+          .then((result) => {
+            res.status(200).send({ 'status': 'ok' });
+            if (!updateRequired || updateRequired == 0) {
+              nconf.set('database:aliasRefreshRequired', 1);
+              nconf.save();
+            }
+          }).catch((err) => {
+            res.status(500).send(err);
+          })
+      } else {
+        res.status(500).send({ 'status': 'id list contained non-numbers' });
+      }
+    } else {
+      if (req.body.address && req.body.alias) {
+        if (id == 'new') {
+          id = null;
+        }
+        var address = req.body.address || 0;
+        var alias = req.body.alias || 'null';
+        var agency = req.body.agency || 'null';
+        var color = req.body.color || 'black';
+        var icon = req.body.icon || 'question';
+        var ignore = req.body.ignore || 0;
+        var pluginconf = JSON.stringify(req.body.pluginconf) || "{}";
+        var updateAlias = req.body.updateAlias || 0;
+
+        console.time('insert');
+        db.from('capcodes')
+          .returning('id')
+          .where('id', '=', id)
+          .modify(function (queryBuilder) {
+            if (id == null) {
+              queryBuilder.insert({
+                id: id,
+                address: address,
+                alias: alias,
+                agency: agency,
+                color: color,
+                icon: icon,
+                ignore: ignore,
+                pluginconf: pluginconf
+              })
+            } else {
+              queryBuilder.update({
+                id: id,
+                address: address,
+                alias: alias,
+                agency: agency,
+                color: color,
+                icon: icon,
+                ignore: ignore,
+                pluginconf: pluginconf
+              })
+            }
+          })
+          .then((result) => {
+            console.timeEnd('insert');
+            if (updateAlias == 1) {
+              console.time('updateMap');
+              db('messages')
+                .update('alias_id', function () {
+                  this.select('id')
+                    .from('capcodes')
+                    .where('messages.address', 'like', 'address')
+                    .modify(function (queryBuilder) {
+                      if (dbtype == 'oracledb')
+                        queryBuilder.orderByRaw(`REPLACE("address", '_', '%') DESC`);
+                      else
+                        queryBuilder.orderByRaw(`REPLACE(address, '_', '%') DESC`)
+                    })
+                    .limit(1)
+                })
+                .catch((err) => {
+                  logger.main.error(err);
+                })
+                .finally(() => {
+                  console.timeEnd('updateMap');
+                })
+            } else {
+              //Check if we can refresh just this specific alias
+              var specificRefresh = nconf.get('global:SpecificAliasRefresh');
+              if (specificRefresh && /^\d+$/.test(req.body.address)) {
+                //Refresh this specific Alias
+                console.time('updateMap');
+                db('messages').update('alias_id', function () {
+                  this.select('id')
+                    .from('capcodes')
+                    .where(db.ref('messages.address'), 'like', db.ref('capcodes.address'))
+                    .modify(function (queryBuilder) {
+                      if (dbtype == 'oracledb')
+                        queryBuilder.orderByRaw(`REPLACE("address", '_', '%') DESC`);
+                      else
+                        queryBuilder.orderByRaw(`REPLACE(address, '_', '%') DESC`)
+                  })
+                  .limit(1)
+                })
+                .where(db.ref('messages.address'), '=', req.body.address)
+                .catch((err) => {
+                  logger.main.error(err);
+                })
+                .finally(() => {
+                  console.timeEnd('updateMap');
+                })
+              } else {
+                //We cannot update this specific Alias, so inform of required Alias Refresh
+                if (!updateRequired || updateRequired == 0) {
+                  nconf.set('database:aliasRefreshRequired', 1);
+                  nconf.save();
+                }
+              }
+            }
+            res.status(200).send({ 'status': 'ok', 'id': result })
+          })
+          .catch((err) => {
+            console.timeEnd('insert');
+            logger.main.error(err)
+            res.status(500).send(err);
+          })
+        logger.main.debug(util.format('%o', req.body || 'request body empty'));
+      } else {
+        res.status(500).json({ message: 'Error - address or alias missing' });
+      }
+    }
+  })
+  .delete(authHelper.isAdmin, function (req, res, next) {
+    // delete single alias
+    var id = parseInt(req.params.id, 10);
+    nconf.load();
+    var updateRequired = nconf.get('database:aliasRefreshRequired');
+    logger.main.info('Deleting ' + id);
+    db.from('capcodes')
+      .del()
+      .where('id', id)
+      .then((result) => {
+        res.status(200).send({ 'status': 'ok' });
+        if (!updateRequired || updateRequired == 0) {
+          nconf.set('database:aliasRefreshRequired', 1);
+          nconf.save();
+        }
+      })
+      .catch((err) => {
+        res.status(500).send(err);
+      })
+    logger.main.debug(util.format('%o', req.body || 'request body empty'));
+  });
+
+router.route('/capcodeCheck/:id')
+  .get(authHelper.isAdmin, function (req, res, next) {
+    var id = req.params.id;
+    db.from('capcodes')
+      .select('*')
+      .where('address', id)
+      .then((row) => {
+        if (row.length > 0) {
+          row = row[0]
+          row.pluginconf = parseJSON(row.pluginconf);
+          res.status(200);
+          res.json(row);
+        } else {
+          row = {
+            "id": "",
+            "address": "",
+            "alias": "",
+            "agency": "",
+            "icon": "question",
+            "color": "black",
+            "ignore": 0,
+            "pluginconf": {}
+          };
+          res.status(200);
+          res.json(row);
+        }
+      })
+      .catch((err) => {
+        logger.main.error(err);
+        return next(err);
+      })
+  });
+
+router.route('/capcodeRefresh')
+  .post(authHelper.isAdmin, function (req, res, next) {
+    nconf.load();
+    var dbtype = nconf.get('database:type');
+    console.time('updateMap');
+    db('messages').update('alias_id', function () {
+      this.select('id')
+        .from('capcodes')
+        .where(db.ref('messages.address'), 'like', db.ref('capcodes.address'))
+        .modify(function (queryBuilder) {
+          if (dbtype == 'oracledb')
+            queryBuilder.orderByRaw(`REPLACE("address", '_', '%') DESC`);
+          else
+            queryBuilder.orderByRaw(`REPLACE(address, '_', '%') DESC`)
+        })
+        .limit(1)
+    })
+      .then((result) => {
+        console.timeEnd('updateMap');
+        nconf.set('database:aliasRefreshRequired', 0);
+        nconf.save();
+        res.status(200).send({ 'status': 'ok' });
+      })
+      .catch((err) => {
+        logger.main.error(err);
+        console.timeEnd('updateMap');
+      })
+  });
+
+router.route('/capcodeExport')
+  .post(authHelper.isAdmin, function (req, res, next) {
+    nconf.load();
+    var dbtype = nconf.get('database:type');
+    var filename = 'export.csv'
+    db.from('capcodes')
+      .select('*')
+      .modify(function (queryBuilder) {
+        if (dbtype == 'oracledb')
+          queryBuilder.orderByRaw(`REPLACE("address", '_', '%')`);
+        else
+          queryBuilder.orderByRaw(`REPLACE(address, '_', '%')`)
+      })
+      .then((rows) => {
+        converter.json2csv(rows, function (err, data) {
+          if (err) {
+            res.status(500).send(err);
+          } else {
+            res.status(200).send({ 'status': 'ok', 'data': data })
+          }
+        })
+      })
+      .catch((err) => {
+        logger.main.error(err);
+        return next(err);
+      })
+  });
+
+router.route('/capcodeImport')
+  .post(authHelper.isAdmin, function (req, res, next) {
+    for (var key in req.body) {
+      //remove newline chars from dataset - yes i realise we are adding them in admin.main.js, it doesn't submit without them.
+      req.body[key] = req.body[key].replace(/[\r\n]/g, '');
+    }
+    // join data but remove the last newline to prevent the last one being malformed. 
+    var importdata = req.body.join('\n').slice(0, -1);
+    var importresults = [];
+    converter.csv2jsonAsync(importdata)
+      .then(async (data) => {
+        var header = data[0]
+        if (('address' in header) && ('alias' in header)) {
+          //this checks if the csv has the required headings, should replace this with some form of proper validation
+          for await (capcode of data) {
+            var address = capcode.address || 0;
+            var alias = capcode.alias || 'null';
+            var agency = capcode.agency || 'null';
+            var color = capcode.color || 'black';
+            var icon = capcode.icon || 'question';
+            var ignore = capcode.ignore || 0;
+            var pluginconf = JSON.stringify(capcode.pluginconf) || "{}";
+            await db('capcodes')
+              .returning('id')
+              .where('address', '=', address)
+              .first()
+              .then((rows) => {
+                if (rows) {
+                  //Update the existing alias if one is found.
+                  return db('capcodes')
+                    .where('id', '=', rows.id)
+                    .update({
+                      address: address,
+                      alias: alias,
+                      agency: agency,
+                      color: color,
+                      icon: icon,
+                      ignore: ignore,
+                      pluginconf: pluginconf
+                    })
+                    .then((result) => {
+                      importresults.push({
+                        address: address,
+                        alias: alias,
+                        result: 'updated'
+                      })
+                    })
+                    .catch((err) => {
+                      importresults.push({
+                        address: address,
+                        alias: alias,
+                        result: 'failed' + err
+                      })
+                    })
+                } else {
+                  //Create new alias if one didn't get returned.
+                  return db('capcodes').insert({
+                    id: null,
+                    address: address,
+                    alias: alias,
+                    agency: agency,
+                    color: color,
+                    icon: icon,
+                    ignore: ignore,
+                    pluginconf: pluginconf
+                  })
+                    .then((result) => {
+                      importresults.push({
+                        address: address,
+                        alias: alias,
+                        result: 'created'
+                      })
+                    })
+                    .catch((err) => {
+                      importresults.push({
+                        address: address,
+                        alias: alias,
+                        result: 'failed' + err
+                      })
+                    })
+                }
+              })
+              .catch((err) => {
+                importresults.push({
+                  'address': address,
+                  'alias': alias,
+                  'result': 'failed' + err
+                })
+              });
+          };
+          //Gather all the results, format for the frontend and send it back.
+          let results = { "results": importresults }
+          res.status(200)
+          res.json(results)
+          logger.main.debug('Import:' + JSON.stringify(importresults))
+          nconf.set('database:aliasRefreshRequired', 1);
+          nconf.save();
+        } else {
+          throw 'Error parasing CSV header'
+        }
+      })
+      .catch((err) => {
+        res.status(500).send(err)
+        logger.main.error(err)
+      })
+  });
+
+router.route('/user')
+  .get(authHelper.isAdmin, function (req, res, next) {
+    db.from('users')
+      .select('id','givenname','surname','username','email','role','status','lastlogondate')
+      .then((rows) => {
+        res.json(rows);
+      })
+      .catch((err) => {
+        logger.main.error(err);
+        return next(err);
+      })
+  }) 
+  .post(authHelper.isAdmin, function (req, res, next) {
+    if (req.body.username && req.body.email && req.body.givenname && req.body.password && req.body.status && req.body.role) {
+      var username = req.body.username
+      var email = req.body.email
+      db.table('users')
+        .where('username', '=', username)
+        .orWhere('email', '=', email)
+        .first()
+        .then((row) => {
+          if (row) {
+            //add logging
+            res.status(400).send({ 'status': 'error', 'error': 'Username or Email exists' });
+          } else {
+            const salt = bcrypt.genSaltSync();
+            const hash = bcrypt.hashSync(req.body.password, salt);
+
+            return db('users')
+              .insert({
+                username: req.body.username,
+                password: hash,
+                givenname: req.body.givenname,
+                surname: req.body.surname,
+                email: req.body.email,
+                role: req.body.role,
+                status: req.body.status,
+                lastlogondate: null
+              })
+              .returning('id')
+              .then((response) => {
+                //add logging
+                logger.main.debug('created user id: ' + response)
+                res.status(200).send({ 'status': 'ok', 'id': response[0] });
+              })
+              .catch((err) => {
+                logger.main.error(err)
+                res.status(500).send({ 'status': 'error' });
+              });
+          }
+        })
+    } else {
+      res.status(400).send({ 'status': 'error', 'error': 'Invalid request body' });
+    }
+  });
+
+router.route('/userCheck/username/:id')
+  .get(authHelper.isAdmin, function (req, res, next) {
+    var id = req.params.id;
+    db.from('users')
+      .select('id','givenname','surname','username','email','role','status','lastlogondate')
+      .where('username', id)
+      .then((row) => {
+        if (row.length > 0) {
+          row = row[0]
+          res.status(200);
+          res.json(row);
+        } else {
+          row = {
+            "username": "",
+            "password": "",
+            "givenname": "",
+            "surname": "",
+            "email": "",
+            "role": "user",
+            "status": "active"
+          };
+          res.status(200);
+          res.json(row);
+        }
+      })
+      .catch((err) => {
+        logger.main.error(err);
+        return next(err);
+      })
+  });
+
+  router.route('/userCheck/email/:id')
+  .get(authHelper.isAdmin, function (req, res, next) {
+    var id = req.params.id;
+    db.from('users')
+      .select('id','givenname','surname','username','email','role','status','lastlogondate')
+      .where('email', id)
+      .then((row) => {
+        if (row.length > 0) {
+          row = row[0]
+          res.status(200);
+          res.json(row);
+        } else {
+          row = {
+            "username": "",
+            "password": "",
+            "givenname": "",
+            "surname": "",
+            "email": "",
+            "role": "user",
+            "status": "active"
+          };
+          res.status(200);
+          res.json(row);
+        }
+      })
+      .catch((err) => {
+        logger.main.error(err);
+        return next(err);
+      })
+  });
+
+router.route('/user/:id')
+  .get(authHelper.isAdmin, function (req, res, next) {
+    var id = req.params.id;
+    var defaults = {
+      "username": "",
+      "password": "",
+      "givenname": "",
+      "surname": "",
+      "email": "",
+      "role": "user",
+      "status": "active"
+    };
+    if (id == 'new') {
+      res.status(200);
+      res.json(defaults);
+    } else {
+      db.from('users')
+        .select('id','givenname','surname','username','email','role','status','lastlogondate')
+        .where('id', id)
+        .then(function (row) {
+          if (row.length > 0) {
+            row = row[0]
+            res.status(200);
+            res.json(row);
+          } else {
+            res.status(200);
+            res.json(defaults);
+          }
+        })
+        .catch((err) => {
+          logger.main.error(err);
+          return next(err);
+        })
+    }
+  })
+  .post(authHelper.isAdmin, function (req, res, next) {
+    var id = req.params.id || req.body.id || null;
+    if (id == 'deleteMultiple') {
+      // do delete multiple
+      var idList = req.body.deleteList || [0, 0];
+      if (!idList.some(isNaN)) {
+        //ADD CHECK TO NOT ALLOW DELETION OF USERID 1
+        logger.main.info('Deleting: ' + idList);
+        db.from('users')
+          .del()
+          .where('id', 'in', idList)
+          .then((result) => {
+            res.status(200).send({ 'status': 'ok' });
+
+          }).catch((err) => {
+            res.status(500).send(err);
+          })
+      } else {
+        res.status(400).send({ 'status': 'error', 'error': 'id list contained non-numbers' });
+      }
+    } else {
+      if (req.body.username && req.body.email && req.body.givenname) {
+        var password = req.body.newpassword || req.body.password||  null;
+        if (id == 'new') {
+          // Password is a required field if this is a new account check for that
+          if (!req.body.password) {
+            return res.status(400).send({'status': 'error', 'error': 'Error - required field missing' });
+          } else {
+            id = null;
+          }
+        }
+        console.time('insert');
+        db.from('users')
+          .returning('id')
+          .where('id', '=', id)
+          .modify(function (queryBuilder) {
+            const userobj ={
+              id: id,
+              username: req.body.username,
+              givenname: req.body.givenname,
+              surname: req.body.surname || '',
+              email: req.body.email,
+              role: req.body.role || 'user',
+              status: req.body.status || 'disabled',
+            }
+            if (password != null) {
+              const salt = bcrypt.genSaltSync();
+              const hash = bcrypt.hashSync(password, salt);
+              userobj.password = hash
+              if (id == null) {
+                userobj.lastlogondate = null
+                queryBuilder.insert(userobj)
+              } else {
+                queryBuilder.update(userobj)
+              }
+            } else {
+              queryBuilder.update(userobj)
+            }
+          })
+          .returning('id')
+          .then((result) => {
+            console.timeEnd('insert');
+            res.status(200).send({ 'status': 'ok', 'id': result[0] })
+          })
+          .catch((err) => {
+            console.timeEnd('insert');
+            logger.main.error(err)
+            res.status(500).send(err);
+          })
+      } else {
+        res.status(400).send({'status': 'error', 'error': 'Error - required field missing' });
+      }
+    }
+  })
+  .delete(authHelper.isAdmin, function (req, res, next) {
+    var id = parseInt(req.params.id, 10);
+    if (id != 1) {
+      logger.main.info('Deleting User ' + id);
+      db.from('users')
+        .del()
+        .where('id', id)
+        .then((result) => {
+          res.status(200).send({ 'status': 'ok' });
+        })
+        .catch((err) => {
+          res.status(500).send(err);
+          logger.main.error(err)
+        })
+    } else {
+      res.status(400).json({ 'error': 'User ID 1 is protected' });
+      logger.main.error('Unable to delete user ID 1')
+    }
+  });
+
+router.use([handleError]);
+
+module.exports = router;
+
+function handleError(err, req, res, next) {
+  var output = {
+    error: {
+      name: err.name,
+      message: err.message,
+      text: err.toString()
+    }
+  };
+  var statusCode = err.status || 500;
+  res.status(statusCode).json(output);
+}
+
+function parseJSON(json) {
+  var parsed;
+  try {
+    parsed = JSON.parse(json)
+  } catch (e) {
+    // ignore errors
+  }
+  return parsed;
+}
