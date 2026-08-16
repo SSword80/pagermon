@@ -41,6 +41,58 @@ function buildActivity(rows, start, end) {
   });
 }
 
+function buildPeakActivity(activity) {
+  if (!activity || !activity.length) {
+    return { timestamp: null, count: 0, averagePerHour: 0 };
+  }
+
+  var total = activity.reduce(function (sum, point) {
+    return sum + (Number(point.count) || 0);
+  }, 0);
+  var peak = activity.reduce(function (best, point) {
+    return (Number(point.count) || 0) > (Number(best.count) || 0) ? point : best;
+  }, activity[0]);
+
+  return {
+    timestamp: Number(peak.timestamp),
+    count: Number(peak.count) || 0,
+    averagePerHour: Math.round((total / activity.length) * 10) / 10
+  };
+}
+
+function buildTrend(current, previous) {
+  var currentCount = Number(current || 0);
+  var previousCount = Number(previous || 0);
+  var change = currentCount - previousCount;
+  var percent = previousCount === 0
+    ? (currentCount === 0 ? 0 : 100)
+    : Math.round((change / previousCount) * 1000) / 10;
+
+  return {
+    current: currentCount,
+    previous: previousCount,
+    change: change,
+    percent: percent,
+    direction: change > 0 ? 'up' : (change < 0 ? 'down' : 'flat')
+  };
+}
+
+function buildCategoryTrends(currentRows, previousRows, field) {
+  var previousMap = {};
+  (previousRows || []).forEach(function (row) {
+    previousMap[String(row[field])] = Number(row.count || 0);
+  });
+
+  return (currentRows || []).map(function (row) {
+    var name = String(row[field]);
+    var trend = buildTrend(Number(row.count || 0), previousMap[name] || 0);
+    trend[field] = name;
+    return trend;
+  }).sort(function (a, b) {
+    return Math.abs(b.percent) - Math.abs(a.percent);
+  });
+}
+
 router.get('/', authHelper.isLoggedInMessages, function (req, res) {
   var range = getRange(req);
 
@@ -48,9 +100,19 @@ router.get('/', authHelper.isLoggedInMessages, function (req, res) {
     return res.status(400).json({ error: 'Invalid date range' });
   }
 
+  var duration = range.end - range.start;
+  var previousRange = {
+    start: range.start - duration,
+    end: range.start
+  };
+
   var messages = db('messages')
     .where('timestamp', '>=', range.start)
     .andWhere('timestamp', '<=', range.end);
+
+  var previousMessages = db('messages')
+    .where('timestamp', '>=', previousRange.start)
+    .andWhere('timestamp', '<', previousRange.end);
 
   Promise.all([
     messages.clone().count('* as count'),
@@ -89,8 +151,20 @@ router.get('/', authHelper.isLoggedInMessages, function (req, res) {
       .groupBy(db.raw("COALESCE(NULLIF(messages.protocol, ''), 'UNKNOWN')"))
       .orderBy('count', 'desc')
       .limit(10),
-    messages.clone().select('timestamp')
+    messages.clone().select('timestamp'),
+    previousMessages.clone().count('* as count'),
+    previousMessages.clone()
+      .leftJoin('capcodes', 'capcodes.id', 'messages.alias_id')
+      .select(db.raw("COALESCE(NULLIF(capcodes.agency, ''), 'UNKNOWN') as agency"))
+      .count('messages.id as count')
+      .groupBy(db.raw("COALESCE(NULLIF(capcodes.agency, ''), 'UNKNOWN')")),
+    previousMessages.clone()
+      .select(db.raw("COALESCE(NULLIF(messages.protocol, ''), 'UNKNOWN') as protocol"))
+      .count('messages.id as count')
+      .groupBy(db.raw("COALESCE(NULLIF(messages.protocol, ''), 'UNKNOWN')"))
   ]).then(function (results) {
+    var activity = buildActivity(results[8], range.start, range.end);
+
     res.status(200).json({
       range: range,
       messages: Number(results[0][0].count || 0),
@@ -101,7 +175,13 @@ router.get('/', authHelper.isLoggedInMessages, function (req, res) {
       topAgencies: results[5],
       topSources: results[6],
       topProtocols: results[7],
-      activity: buildActivity(results[8], range.start, range.end)
+      activity: activity,
+      peakActivity: buildPeakActivity(activity),
+      trends: {
+        period: buildTrend(results[0][0].count, results[9][0].count),
+        agencies: buildCategoryTrends(results[5], results[10], 'agency'),
+        protocols: buildCategoryTrends(results[7], results[11], 'protocol')
+      }
     });
   }).catch(function (err) {
     res.status(500).json({ error: 'Unable to calculate insights' });
