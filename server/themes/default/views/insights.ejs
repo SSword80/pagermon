@@ -87,6 +87,31 @@
 
   <div class="row">
     <div class="col-xs-12">
+      <div class="panel panel-default" id="insight-trend-panel">
+        <div class="panel-heading"><strong>📈 Traffic Trend</strong></div>
+        <div class="panel-body" aria-live="polite">
+          <div class="text-center">
+            <div id="insight-trend-period" class="h2">—</div>
+            <div class="text-muted">Compared with the previous period</div>
+          </div>
+          <hr>
+          <div class="row">
+            <div class="col-sm-6">
+              <strong>🏢 Agency trends</strong>
+              <div id="insight-trend-agencies" class="small" style="margin-top:10px;">—</div>
+            </div>
+            <div class="col-sm-6">
+              <strong>📡 Protocol trends</strong>
+              <div id="insight-trend-protocols" class="small" style="margin-top:10px;">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-xs-12">
       <div class="panel panel-default">
         <div class="panel-heading"><strong>Messages over time</strong></div>
         <div class="panel-body"><div id="insight-chart" style="width:100%; min-height:300px; overflow:hidden;"></div></div>
@@ -138,6 +163,40 @@ function toDateTimeLocal(timestamp) {
   var date = new Date(timestamp * 1000);
   var pad = function (value) { return String(value).padStart(2, '0'); };
   return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) + 'T' + pad(date.getHours()) + ':' + pad(date.getMinutes());
+}
+
+function renderTrendValue(trend) {
+  var percent = Number(trend.percent || 0);
+  var arrow = trend.direction === 'up' ? '↑' : (trend.direction === 'down' ? '↓' : '→');
+  var sign = percent > 0 ? '+' : '';
+  return arrow + ' ' + sign + percent + '%';
+}
+
+function renderTrendList(items, field) {
+  if (!items || !items.length) {
+    return '<span class="text-muted">No trend data</span>';
+  }
+
+  return items.slice(0, 5).map(function (item) {
+    var name = $('<div>').text(item[field] || 'UNKNOWN').html();
+    return '<div style="margin-bottom:6px;">' +
+      '<strong>' + name + '</strong> ' +
+      renderTrendValue(item) +
+      '</div>';
+  }).join('');
+}
+
+function renderTrends(trends) {
+  if (!trends || !trends.period) {
+    $('#insight-trend-period').text('No trend data');
+    $('#insight-trend-agencies').html('<span class="text-muted">No trend data</span>');
+    $('#insight-trend-protocols').html('<span class="text-muted">No trend data</span>');
+    return;
+  }
+
+  $('#insight-trend-period').text(renderTrendValue(trends.period));
+  $('#insight-trend-agencies').html(renderTrendList(trends.agencies, 'agency'));
+  $('#insight-trend-protocols').html(renderTrendList(trends.protocols, 'protocol'));
 }
 
 function renderInsightChart(activity) {
@@ -217,6 +276,7 @@ function loadInsights() {
       $('#insight-source').text(data.topAgencies.length ? data.topAgencies[0].agency || 'UNKNOWN' : 'UNKNOWN');
       renderInsightChart(data.activity);
       renderActivityHeatmap(data.activity);
+      renderTrends(data.trends);
       renderProtocolTable(data.topProtocols, data.messages);
       renderInsightTable('#insight-address-table', data.topAddresses, function (row) { return row.address || '—'; });
       renderInsightTable('#insight-capcode-table', data.topCapcodes, function (row) { return row.alias || row.address || '—'; });
