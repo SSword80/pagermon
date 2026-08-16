@@ -38,6 +38,9 @@
   #insights-body .insight-trend-value.flat { color: #777; }
   #insights-body .insight-trend-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid #eee; }
   #insights-body .insight-trend-row:last-child { border-bottom: 0; }
+  #insights-body .peak-time { font-size: 22px; font-weight: 600; }
+  #insights-body .peak-value { font-size: 28px; font-weight: 600; }
+  #insights-body .peak-meta { color: #777; font-size: 12px; }
   @media (max-width: 767px) {
     #insights-body .insight-toolbar { margin-top: 10px; }
     #insights-body .insight-title { float: none !important; }
@@ -111,6 +114,31 @@
               <div id="insight-trend-protocols" class="small" style="margin-top:10px;">—</div>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-xs-12">
+      <div class="panel panel-default">
+        <div class="panel-heading"><strong>🔥 Peak Activity</strong></div>
+        <div class="panel-body" aria-live="polite">
+          <div class="row text-center">
+            <div class="col-sm-4">
+              <div class="text-muted">Busiest period</div>
+              <div id="insight-peak-time" class="peak-time">—</div>
+            </div>
+            <div class="col-sm-4">
+              <div class="text-muted">Peak messages</div>
+              <div id="insight-peak-count" class="peak-value">—</div>
+            </div>
+            <div class="col-sm-4">
+              <div class="text-muted">Average / hour</div>
+              <div id="insight-average-hour" class="peak-value">—</div>
+            </div>
+          </div>
+          <div class="text-center peak-meta" style="margin-top:8px;">Based on the selected Insights date range.</div>
         </div>
       </div>
     </div>
@@ -275,6 +303,25 @@ function renderProtocolTable(rows, total) {
   $('#insight-protocol-list').html(html);
 }
 
+function renderPeakActivity(peak) {
+  if (!peak || !peak.timestamp) {
+    $('#insight-peak-time').text('No activity');
+    $('#insight-peak-count').text('0');
+    $('#insight-average-hour').text('0');
+    return;
+  }
+
+  var start = new Date(Number(peak.timestamp) * 1000);
+  var end = new Date((Number(peak.timestamp) + 3600) * 1000);
+  var day = start.toLocaleDateString([], { weekday: 'long' });
+  var startTime = start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  var endTime = end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  $('#insight-peak-time').text(day + ' ' + startTime + '–' + endTime);
+  $('#insight-peak-count').text(Number(peak.count || 0).toLocaleString());
+  $('#insight-average-hour').text(Number(peak.averagePerHour || 0).toLocaleString());
+}
+
 function loadInsights() {
   var range = insightRange();
   $.getJSON('/api/insights?start=' + range.start + '&end=' + range.end)
@@ -284,6 +331,7 @@ function loadInsights() {
       $('#insight-capcodes').text(data.uniqueCapcodes.toLocaleString());
       $('#insight-source').text(data.topAgencies.length ? data.topAgencies[0].agency || 'UNKNOWN' : 'UNKNOWN');
       renderInsightChart(data.activity);
+      renderPeakActivity(data.peakActivity);
       renderActivityHeatmap(data.activity);
       renderTrends(data.trends);
       renderProtocolTable(data.topProtocols, data.messages);
