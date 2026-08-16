@@ -54,6 +54,17 @@ describe('GET /api/insights', () => {
                 res.body.trends.agencies.should.be.an('array');
                 res.body.trends.protocols.should.be.an('array');
 
+                res.body.anomaly.should.be.an('object');
+                res.body.anomaly.should.have.property('status');
+                res.body.anomaly.should.have.property('current');
+                res.body.anomaly.should.have.property('baseline');
+                res.body.anomaly.should.have.property('percent');
+                res.body.anomaly.should.have.property('sufficientData');
+                res.body.anomaly.current.should.be.a('number');
+                res.body.anomaly.baseline.should.be.a('number');
+                res.body.anomaly.percent.should.be.a('number');
+                res.body.anomaly.sufficientData.should.be.a('boolean');
+
                 done();
             });
     });

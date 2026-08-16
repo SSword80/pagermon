@@ -36,6 +36,42 @@ function buildPeakActivity(activity) {
   return { timestamp: Number(peak.timestamp), count: Number(peak.count) || 0, averagePerHour: Math.round((total / activity.length) * 10) / 10 };
 }
 
+function buildAnomaly(activity, livePulseCount) {
+  var hour = 60 * 60;
+  var current = Number(livePulseCount || 0);
+  var now = Math.floor(Date.now() / 1000);
+  var currentWindowStart = now - hour;
+  var previousWindows = (activity || []).filter(function (point) {
+    var timestamp = Number(point.timestamp);
+    return timestamp < Math.floor(currentWindowStart / hour) * hour;
+  });
+
+  if (previousWindows.length < 3) {
+    return { status: 'normal', current: current, baseline: 0, percent: 0, sufficientData: false };
+  }
+
+  var total = previousWindows.reduce(function (sum, point) {
+    return sum + (Number(point.count) || 0);
+  }, 0);
+
+  var baseline = total / previousWindows.length;
+  var percent = baseline === 0
+    ? (current === 0 ? 0 : 100)
+    : Math.round(((current - baseline) / baseline) * 1000) / 10;
+
+  var status = 'normal';
+  if (current >= baseline * 1.5) status = 'spike';
+  else if (current <= baseline * 0.5) status = 'drop';
+
+  return {
+    status: status,
+    current: current,
+    baseline: Math.round(baseline * 10) / 10,
+    percent: percent,
+    sufficientData: true
+  };
+}
+
 function buildTrend(current, previous) {
   var currentCount = Number(current || 0);
   var previousCount = Number(previous || 0);
@@ -81,7 +117,7 @@ router.get('/', authHelper.isLoggedInMessages, function (req, res) {
     livePulse.clone().count('* as count')
   ]).then(function (results) {
     var activity = buildActivity(results[8], range.start, range.end);
-    res.status(200).json({ range: range, messages: Number(results[0][0].count || 0), uniqueAddresses: Number(results[1][0].count || 0), uniqueCapcodes: Number(results[2][0].count || 0), topAddresses: results[3], topCapcodes: results[4], topAgencies: results[5], topSources: results[6], topProtocols: results[7], livePulse: { count: Number(results[12][0].count || 0) }, activity: activity, peakActivity: buildPeakActivity(activity), trends: { period: buildTrend(results[0][0].count, results[9][0].count), agencies: buildCategoryTrends(results[5], results[10], 'agency'), protocols: buildCategoryTrends(results[7], results[11], 'protocol') } });
+    res.status(200).json({ range: range, messages: Number(results[0][0].count || 0), uniqueAddresses: Number(results[1][0].count || 0), uniqueCapcodes: Number(results[2][0].count || 0), topAddresses: results[3], topCapcodes: results[4], topAgencies: results[5], topSources: results[6], topProtocols: results[7], livePulse: { count: Number(results[12][0].count || 0) }, anomaly: buildAnomaly(activity, results[12][0].count), activity: activity, peakActivity: buildPeakActivity(activity), trends: { period: buildTrend(results[0][0].count, results[9][0].count), agencies: buildCategoryTrends(results[5], results[10], 'agency'), protocols: buildCategoryTrends(results[7], results[11], 'protocol') } });
   }).catch(function (err) { res.status(500).json({ error: 'Unable to calculate insights' }); });
 });
 

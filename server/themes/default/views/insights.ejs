@@ -38,6 +38,16 @@
   #insights-body .insight-live-pulse.inactive { border-left-color: #999; }
   #insights-body .insight-live-pulse-label { font-size: 16px; font-weight: 600; }
   #insights-body .insight-live-pulse-count { font-size: 30px; font-weight: 600; margin: 4px 0; }
+  #insights-body .insight-status-row { display: flex; }
+  #insights-body .insight-status-row > [class*="col-"] { display: flex; }
+  #insights-body .insight-status-row .panel { width: 100%; margin-bottom: 20px; }
+  #insights-body .insight-status-row .panel-body { min-height: 150px; display: flex; flex-direction: column; justify-content: center; }
+  #insights-body .insight-anomaly { border-left: 4px solid #999; }
+  #insights-body .insight-anomaly.normal { border-left-color: #3c763d; }
+  #insights-body .insight-anomaly.spike { border-left-color: #a94442; }
+  #insights-body .insight-anomaly.drop { border-left-color: #f0ad4e; }
+  #insights-body .insight-anomaly-label { font-size: 16px; font-weight: 600; }
+  #insights-body .insight-anomaly-message { font-size: 20px; font-weight: 600; margin: 5px 0; }
   #insights-body .insight-trend-value { font-size: 14px; font-weight: 600; white-space: nowrap; }
   #insights-body .insight-trend-value.up { color: #3c763d; }
   #insights-body .insight-trend-value.down { color: #a94442; }
@@ -104,13 +114,23 @@
     <div class="col-sm-6 col-md-3"><div class="panel panel-default"><div class="panel-body text-center"><div class="text-muted">Top agency</div><div id="insight-source" class="h2">—</div></div></div></div>
   </div>
 
-  <div class="row">
-    <div class="col-xs-12">
+  <div class="row insight-status-row">
+    <div class="col-sm-6">
       <div class="panel panel-default insight-live-pulse">
         <div class="panel-body text-center">
           <div id="insight-live-pulse-label" class="insight-live-pulse-label">⚪ Live Pulse</div>
           <div id="insight-live-pulse-count" class="insight-live-pulse-count">—</div>
           <div class="text-muted">messages in the last hour</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-sm-6">
+      <div class="panel panel-default insight-anomaly">
+        <div class="panel-body text-center">
+          <div id="insight-anomaly-label" class="insight-anomaly-label">⚪ Traffic Anomaly</div>
+          <div id="insight-anomaly-message" class="insight-anomaly-message">Checking traffic patterns…</div>
+          <div id="insight-anomaly-detail" class="text-muted"></div>
         </div>
       </div>
     </div>
@@ -359,6 +379,45 @@ function renderLivePulse(pulse) {
   $('.insight-live-pulse').removeClass('active quiet inactive').addClass(status);
 }
 
+function renderAnomaly(anomaly) {
+  var data = anomaly || {};
+  var status = data.status || 'normal';
+  var current = Number(data.current || 0);
+  var baseline = Number(data.baseline || 0);
+  var percent = Number(data.percent || 0);
+
+  var label = '🟢 Traffic Anomaly';
+  var message = 'Traffic is within normal range';
+  var detail = '';
+
+  if (!data.sufficientData) {
+    label = '⚪ Traffic Anomaly';
+    message = 'Not enough traffic history';
+    detail = 'At least three completed hourly periods are needed.';
+    status = '';
+  } else if (status === 'spike') {
+    label = '🚨 Traffic Spike';
+    message = 'Traffic is unusually high';
+    detail = current.toLocaleString() + ' messages vs ' +
+      baseline.toLocaleString() + ' typical per hour (' +
+      (percent > 0 ? '+' : '') + percent.toFixed(1) + '%)';
+  } else if (status === 'drop') {
+    label = '🟡 Traffic Drop';
+    message = 'Traffic is unusually quiet';
+    detail = current.toLocaleString() + ' messages vs ' +
+      baseline.toLocaleString() + ' typical per hour (' +
+      percent.toFixed(1) + '%)';
+  } else {
+    detail = current.toLocaleString() + ' messages vs ' +
+      baseline.toLocaleString() + ' typical per hour';
+  }
+
+  $('#insight-anomaly-label').text(label);
+  $('#insight-anomaly-message').text(message);
+  $('#insight-anomaly-detail').text(detail);
+  $('.insight-anomaly').removeClass('normal spike drop').addClass(status);
+}
+
 function loadInsights() {
   var range = insightRange();
   $.getJSON('/api/insights?start=' + range.start + '&end=' + range.end)
@@ -368,6 +427,7 @@ function loadInsights() {
       $('#insight-capcodes').text(data.uniqueCapcodes.toLocaleString());
       $('#insight-source').text(data.topAgencies.length ? data.topAgencies[0].agency || 'UNKNOWN' : 'UNKNOWN');
       renderLivePulse(data.livePulse);
+      renderAnomaly(data.anomaly);
       renderInsightChart(data.activity);
       renderPeakActivity(data.peakActivity);
       renderActivityHeatmap(data.activity);
