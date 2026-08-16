@@ -21,6 +21,73 @@ beforeEach(() => db.migrate.rollback().then(() => db.migrate.latest().then(() =>
 
 afterEach(() => db.migrate.rollback().then(() => passportStub.logout()));
 
+describe('GET /api/insights/messages', () => {
+    it('should return messages for a selected hourly range', done => {
+        nconf.set('messages:apiSecurity', false);
+        nconf.save();
+
+        db('messages')
+            .orderBy('id', 'asc')
+            .then(rows => {
+                var first = rows[0];
+                var start = Number(first.timestamp);
+                var end = start + 3600;
+
+                return chai.request(server)
+                    .get('/api/insights/messages?start=' + start + '&end=' + end)
+                    .then(res => {
+                        res.status.should.eql(200);
+                        res.body.range.start.should.eql(start);
+                        res.body.range.end.should.eql(end);
+                        res.body.messages.should.be.an('array');
+                        res.body.count.should.eql(res.body.messages.length);
+                        res.body.truncated.should.eql(false);
+
+                        res.body.messages.forEach(message => {
+                            Number(message.timestamp).should.be.at.least(start);
+                            Number(message.timestamp).should.be.at.most(end);
+                        });
+
+                        for (var i = 1; i < res.body.messages.length; i++) {
+                            Number(res.body.messages[i - 1].timestamp)
+                                .should.be.at.least(Number(res.body.messages[i].timestamp));
+                        }
+
+                        done();
+                    });
+            })
+            .catch(done);
+    });
+
+    it('should return 400 for a message range longer than one hour', done => {
+        nconf.set('messages:apiSecurity', false);
+        nconf.save();
+
+        chai.request(server)
+            .get('/api/insights/messages?start=1529487000&end=1529490601')
+            .end((err, res) => {
+                should.not.exist(err);
+                res.status.should.eql(400);
+                res.body.error.should.eql('Invalid message range');
+                done();
+            });
+    });
+
+    it('should return 400 for an invalid message range', done => {
+        nconf.set('messages:apiSecurity', false);
+        nconf.save();
+
+        chai.request(server)
+            .get('/api/insights/messages?start=1529500000&end=1529487000')
+            .end((err, res) => {
+                should.not.exist(err);
+                res.status.should.eql(400);
+                res.body.error.should.eql('Invalid message range');
+                done();
+            });
+    });
+});
+
 describe('GET /api/insights', () => {
     it('should return message insights for a requested range', done => {
         nconf.set('messages:apiSecurity', false);

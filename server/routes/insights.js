@@ -96,6 +96,45 @@ function buildCategoryTrends(currentRows, previousRows, field) {
   }).sort(function (a, b) { return Math.abs(b.percent) - Math.abs(a.percent); });
 }
 
+router.get('/messages', authHelper.isLoggedInMessages, function (req, res) {
+  var range = getRange(req);
+  if (!range || (range.end - range.start) > (60 * 60)) {
+    return res.status(400).json({ error: 'Invalid message range' });
+  }
+
+  db('messages')
+    .leftJoin('capcodes', 'capcodes.id', 'messages.alias_id')
+    .select(
+      'messages.id',
+      'messages.address',
+      'messages.message',
+      'messages.source',
+      'messages.timestamp',
+      'messages.alias_id',
+      'messages.protocol',
+      'capcodes.alias',
+      'capcodes.agency',
+      'capcodes.icon',
+      'capcodes.color',
+      'capcodes.ignore'
+    )
+    .where('messages.timestamp', '>=', range.start)
+    .andWhere('messages.timestamp', '<=', range.end)
+    .orderBy('messages.timestamp', 'desc')
+    .limit(50)
+    .then(function (rows) {
+      res.status(200).json({
+        range: range,
+        count: rows.length,
+        truncated: rows.length === 50,
+        messages: rows
+      });
+    })
+    .catch(function () {
+      res.status(500).json({ error: 'Unable to load insight messages' });
+    });
+});
+
 router.get('/', authHelper.isLoggedInMessages, function (req, res) {
   var range = getRange(req);
   if (!range) return res.status(400).json({ error: 'Invalid date range' });
