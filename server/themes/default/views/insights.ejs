@@ -48,6 +48,9 @@
   #insights-body .insight-anomaly.drop { border-left-color: #f0ad4e; }
   #insights-body .insight-anomaly-label { font-size: 16px; font-weight: 600; }
   #insights-body .insight-anomaly-message { font-size: 20px; font-weight: 600; margin: 5px 0; }
+  #insights-body .insight-table-track { height: 5px; margin-top: 5px; background: #eee; border-radius: 3px; overflow: hidden; }
+  #insights-body .insight-table-bar { display: block; height: 100%; background: #777; border-radius: 3px; min-width: 0; }
+  #insights-body .insight-table-percent { font-size: 11px; color: #777; margin-top: 2px; }
   #insights-body .insight-trend-value { font-size: 14px; font-weight: 600; white-space: nowrap; }
   #insights-body .insight-trend-value.up { color: #3c763d; }
   #insights-body .insight-trend-value.down { color: #a94442; }
@@ -332,9 +335,25 @@ function renderActivityHeatmap(activity) {
   container.innerHTML = cells.join('');
 }
 
-function renderInsightTable(selector, rows, label) {
+function renderInsightTable(selector, rows, label, total) {
   var html = '';
-  (rows || []).forEach(function (row) { var value = label(row); html += '<tr><td>' + $('<div>').text(value).html() + '</td><td class="text-right">' + Number(row.count || 0).toLocaleString() + '</td></tr>'; });
+  (rows || []).forEach(function (row) {
+    var value = label(row);
+    var count = Number(row.count || 0);
+    var percent = total ? (count / total) * 100 : 0;
+    var width = Math.max(percent, count ? 1 : 0);
+
+    html += '<tr><td>' +
+      $('<div>').text(value).html() +
+      '<div class="insight-table-track"><span class="insight-table-bar" style="width:' +
+      width + '%;"></span></div>' +
+      '<div class="insight-table-percent">' +
+      percent.toFixed(1) + '%</div>' +
+      '</td><td class="text-right">' +
+      count.toLocaleString() +
+      '</td></tr>';
+  });
+
   if (!html) html = '<tr><td colspan="2" class="text-muted">No data</td></tr>';
   $(selector).html(html);
 }
@@ -460,8 +479,8 @@ function loadInsights() {
       renderTrends(data.trends);
       renderAgencyList(data.topAgencies, data.messages);
       renderProtocolTable(data.topProtocols, data.messages);
-      renderInsightTable('#insight-address-table', data.topAddresses, function (row) { return row.address || '—'; });
-      renderInsightTable('#insight-capcode-table', data.topCapcodes, function (row) { return row.alias || row.address || '—'; });
+      renderInsightTable('#insight-address-table', data.topAddresses, function (row) { return row.address || '—'; }, data.messages);
+      renderInsightTable('#insight-capcode-table', data.topCapcodes, function (row) { return row.alias || row.address || '—'; }, data.messages);
       renderInsightTable('#insight-source-table', data.topAgencies, function (row) { return row.agency || 'UNKNOWN'; });
       $('#insight-error').hide();
     })
