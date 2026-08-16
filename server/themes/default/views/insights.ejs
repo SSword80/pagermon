@@ -32,6 +32,12 @@
   #insights-body .heatmap-swatch.level-2 { background: #9acfea; }
   #insights-body .heatmap-swatch.level-3 { background: #5bc0de; }
   #insights-body .heatmap-swatch.level-4 { background: #337ab7; }
+  #insights-body .insight-trend-value { font-weight: 600; white-space: nowrap; }
+  #insights-body .insight-trend-value.up { color: #3c763d; }
+  #insights-body .insight-trend-value.down { color: #a94442; }
+  #insights-body .insight-trend-value.flat { color: #777; }
+  #insights-body .insight-trend-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid #eee; }
+  #insights-body .insight-trend-row:last-child { border-bottom: 0; }
   @media (max-width: 767px) {
     #insights-body .insight-toolbar { margin-top: 10px; }
     #insights-body .insight-title { float: none !important; }
@@ -167,9 +173,12 @@ function toDateTimeLocal(timestamp) {
 
 function renderTrendValue(trend) {
   var percent = Number(trend.percent || 0);
-  var arrow = trend.direction === 'up' ? '↑' : (trend.direction === 'down' ? '↓' : '→');
+  var direction = trend.direction === 'up' ? 'up' : (trend.direction === 'down' ? 'down' : 'flat');
+  var arrow = direction === 'up' ? '↑' : (direction === 'down' ? '↓' : '→');
   var sign = percent > 0 ? '+' : '';
-  return arrow + ' ' + sign + percent + '%';
+  var label = direction === 'up' ? 'Increase' : (direction === 'down' ? 'Decrease' : 'No change');
+  return '<span class="insight-trend-value ' + direction + '" title="' + label + '">' +
+    arrow + ' ' + sign + percent + '%</span>';
 }
 
 function renderTrendList(items, field) {
@@ -179,8 +188,8 @@ function renderTrendList(items, field) {
 
   return items.slice(0, 5).map(function (item) {
     var name = $('<div>').text(item[field] || 'UNKNOWN').html();
-    return '<div style="margin-bottom:6px;">' +
-      '<strong>' + name + '</strong> ' +
+    return '<div class="insight-trend-row">' +
+      '<strong>' + name + '</strong>' +
       renderTrendValue(item) +
       '</div>';
   }).join('');
