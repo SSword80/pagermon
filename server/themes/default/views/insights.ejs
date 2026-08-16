@@ -15,6 +15,23 @@
   #insights-body .protocol-track { height: 16px; background: #f1f1f1; border-radius: 3px; overflow: hidden; }
   #insights-body .protocol-bar { display: block; height: 100%; min-width: 2px; background: #337ab7; border-radius: 3px; }
   #insights-body .protocol-count { margin-top: 4px; font-size: 12px; color: #777; }
+  #insights-body .heatmap-wrap { overflow-x: auto; padding: 10px 15px 15px; }
+  #insights-body .heatmap { min-width: 680px; display: grid; grid-template-columns: 70px repeat(24, minmax(20px, 1fr)); gap: 3px; align-items: center; }
+  #insights-body .heatmap-label { font-size: 11px; color: #777; }
+  #insights-body .heatmap-hour { text-align: center; font-size: 10px; color: #777; }
+  #insights-body .heatmap-cell { height: 22px; border-radius: 3px; background: #f1f1f1; position: relative; }
+  #insights-body .heatmap-cell[data-level="1"] { background: #d9edf7; }
+  #insights-body .heatmap-cell[data-level="2"] { background: #9acfea; }
+  #insights-body .heatmap-cell[data-level="3"] { background: #5bc0de; }
+  #insights-body .heatmap-cell[data-level="4"] { background: #337ab7; }
+  #insights-body .heatmap-cell:hover::after { content: attr(aria-label); position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); white-space: nowrap; z-index: 5; background: #333; color: #fff; padding: 4px 7px; border-radius: 3px; font-size: 11px; }
+  #insights-body .heatmap-legend { margin-top: 8px; text-align: right; font-size: 11px; color: #777; }
+  #insights-body .heatmap-swatch { display: inline-block; width: 14px; height: 14px; vertical-align: middle; margin-left: 4px; border-radius: 2px; }
+  #insights-body .heatmap-swatch.level-0 { background: #f1f1f1; }
+  #insights-body .heatmap-swatch.level-1 { background: #d9edf7; }
+  #insights-body .heatmap-swatch.level-2 { background: #9acfea; }
+  #insights-body .heatmap-swatch.level-3 { background: #5bc0de; }
+  #insights-body .heatmap-swatch.level-4 { background: #337ab7; }
   @media (max-width: 767px) {
     #insights-body .insight-toolbar { margin-top: 10px; }
     #insights-body .insight-title { float: none !important; }
@@ -80,6 +97,18 @@
   <div class="row">
     <div class="col-xs-12">
       <div class="panel panel-default">
+        <div class="panel-heading"><strong>Activity by day and hour</strong></div>
+        <div class="heatmap-wrap">
+          <div id="insight-heatmap" class="heatmap" role="img" aria-label="Message activity by day and hour"></div>
+          <div class="heatmap-legend">Less <span class="heatmap-swatch level-0"></span><span class="heatmap-swatch level-1"></span><span class="heatmap-swatch level-2"></span><span class="heatmap-swatch level-3"></span><span class="heatmap-swatch level-4"></span> More</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-xs-12">
+      <div class="panel panel-default">
         <div class="panel-heading"><strong>Messages by protocol</strong></div>
         <div id="insight-protocol-list" class="protocol-list" aria-live="polite"></div>
       </div>
@@ -126,6 +155,38 @@ function renderInsightChart(activity) {
   container.innerHTML = '<svg width="100%" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="Messages over time">' + yLines + '<line x1="' + padding.left + '" y1="' + (padding.top + plotHeight) + '" x2="' + (width - padding.right) + '" y2="' + (padding.top + plotHeight) + '" stroke="#999" /><polyline points="' + points + '" fill="none" stroke="#337ab7" stroke-width="3" />' + labels + '</svg>';
 }
 
+function renderActivityHeatmap(activity) {
+  var container = document.getElementById('insight-heatmap');
+  var days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  var cells = [];
+  var max = 0;
+  var totals = {};
+  (activity || []).forEach(function (point) {
+    var date = new Date(Number(point.timestamp) * 1000);
+    var key = date.getDay() + '-' + date.getHours();
+    totals[key] = (totals[key] || 0) + (Number(point.count) || 0);
+    max = Math.max(max, totals[key]);
+  });
+  var header = '<div class="heatmap-label"></div>';
+  for (var hour = 0; hour < 24; hour++) header += '<div class="heatmap-hour">' + String(hour).padStart(2, '0') + '</div>';
+  cells.push(header);
+  for (var day = 0; day < 7; day++) {
+    var row = '<div class="heatmap-label">' + days[day] + '</div>';
+    for (var h = 0; h < 24; h++) {
+      var count = totals[day + '-' + h] || 0;
+      var level = max ? Math.min(4, Math.ceil((count / max) * 4)) : 0;
+      var label = days[day] + ' ' + String(h).padStart(2, '0') + ':00 — ' + count.toLocaleString() + ' messages';
+      row += '<div class="heatmap-cell" data-level="' + level + '" aria-label="' + label + '" title="' + label + '"></div>';
+    }
+    cells.push(row);
+  }
+  if (!activity || !activity.length) {
+    container.innerHTML = '<div class="text-muted" style="grid-column:1 / -1;">No message activity for this period.</div>';
+    return;
+  }
+  container.innerHTML = cells.join('');
+}
+
 function renderInsightTable(selector, rows, label) {
   var html = '';
   (rows || []).forEach(function (row) { var value = label(row); html += '<tr><td>' + $('<div>').text(value).html() + '</td><td class="text-right">' + Number(row.count || 0).toLocaleString() + '</td></tr>'; });
@@ -155,6 +216,7 @@ function loadInsights() {
       $('#insight-capcodes').text(data.uniqueCapcodes.toLocaleString());
       $('#insight-source').text(data.topAgencies.length ? data.topAgencies[0].agency || 'UNKNOWN' : 'UNKNOWN');
       renderInsightChart(data.activity);
+      renderActivityHeatmap(data.activity);
       renderProtocolTable(data.topProtocols, data.messages);
       renderInsightTable('#insight-address-table', data.topAddresses, function (row) { return row.address || '—'; });
       renderInsightTable('#insight-capcode-table', data.topCapcodes, function (row) { return row.alias || row.address || '—'; });
