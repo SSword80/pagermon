@@ -40,6 +40,20 @@ describe('GET /api/insights', () => {
                 Number(res.body.topSources[0].count).should.eql(2);
                 res.body.activity.should.be.an('array');
                 res.body.activity.reduce((total, point) => total + Number(point.count), 0).should.eql(5);
+
+                res.body.livePulse.should.be.an('object');
+                res.body.livePulse.count.should.be.a('number');
+
+                res.body.peakActivity.should.be.an('object');
+                res.body.peakActivity.should.have.property('timestamp');
+                res.body.peakActivity.should.have.property('count');
+                res.body.peakActivity.should.have.property('averagePerHour');
+
+                res.body.trends.should.be.an('object');
+                res.body.trends.period.should.be.an('object');
+                res.body.trends.agencies.should.be.an('array');
+                res.body.trends.protocols.should.be.an('array');
+
                 done();
             });
     });
