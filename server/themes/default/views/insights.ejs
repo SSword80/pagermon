@@ -7,7 +7,14 @@
   #insights-body .insight-controls .btn-group { margin-right: 4px; }
   #insights-body .insight-custom-form .form-group { margin-bottom: 0; }
   #insights-body #insight-chart { min-height: 300px; }
-  #insights-body .protocol-bar { display: inline-block; height: 12px; min-width: 2px; background: #337ab7; vertical-align: middle; margin-right: 8px; }
+  #insights-body .protocol-list { padding: 5px 0 10px; }
+  #insights-body .protocol-item { padding: 12px 15px; border-bottom: 1px solid #eee; }
+  #insights-body .protocol-item:last-child { border-bottom: 0; }
+  #insights-body .protocol-name { font-weight: 600; margin-bottom: 5px; }
+  #insights-body .protocol-meta { float: right; color: #777; font-size: 12px; }
+  #insights-body .protocol-track { height: 16px; background: #f1f1f1; border-radius: 3px; overflow: hidden; }
+  #insights-body .protocol-bar { display: block; height: 100%; min-width: 2px; background: #337ab7; border-radius: 3px; }
+  #insights-body .protocol-count { margin-top: 4px; font-size: 12px; color: #777; }
   @media (max-width: 767px) {
     #insights-body .insight-toolbar { margin-top: 10px; }
     #insights-body .insight-title { float: none !important; }
@@ -74,12 +81,7 @@
     <div class="col-xs-12">
       <div class="panel panel-default">
         <div class="panel-heading"><strong>Messages by protocol</strong></div>
-        <div class="table-responsive">
-          <table class="table table-striped table-condensed">
-            <thead><tr><th>Protocol</th><th style="width:70%;">Distribution</th><th class="text-right">Messages</th></tr></thead>
-            <tbody id="insight-protocol-table"></tbody>
-          </table>
-        </div>
+        <div id="insight-protocol-list" class="protocol-list" aria-live="polite"></div>
       </div>
     </div>
   </div>
@@ -138,10 +140,10 @@ function renderProtocolTable(rows, total) {
     var percent = total ? (count / total) * 100 : 0;
     var protocol = row.protocol || 'UNKNOWN';
     var width = Math.max(percent, count ? 1 : 0);
-    html += '<tr><td><strong>' + $('<div>').text(protocol).html() + '</strong></td><td><span class="protocol-bar" style="width:' + width + '%;"></span><span class="text-muted">' + percent.toFixed(1) + '%</span></td><td class="text-right">' + count.toLocaleString() + '</td></tr>';
+    html += '<div class="protocol-item"><div class="protocol-name">' + $('<div>').text(protocol).html() + '<span class="protocol-meta">' + percent.toFixed(1) + '%</span></div><div class="protocol-track"><span class="protocol-bar" style="width:' + width + '%;"></span></div><div class="protocol-count">' + count.toLocaleString() + ' messages</div></div>';
   });
-  if (!html) html = '<tr><td colspan="3" class="text-muted">No protocol data</td></tr>';
-  $('#insight-protocol-table').html(html);
+  if (!html) html = '<div class="protocol-item text-muted">No protocol data</div>';
+  $('#insight-protocol-list').html(html);
 }
 
 function loadInsights() {
