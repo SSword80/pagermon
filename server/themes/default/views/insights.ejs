@@ -39,6 +39,9 @@
   #insights-body .insight-trend-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; }
   #insights-body .insight-trend-row strong { font-size: 15px; }
   #insights-body .insight-trend-row:last-child { border-bottom: 0; }
+  #insights-body .insight-trend-hero { padding: 8px 0 4px; }
+  #insights-body .insight-trend-hero #insight-trend-period { margin-top: 5px; margin-bottom: 5px; font-size: 30px; }
+  #insights-body .insight-trend-section-title { font-size: 15px; font-weight: 600; }
   #insights-body .peak-time { font-size: 22px; font-weight: 600; }
   #insights-body .peak-value { font-size: 28px; font-weight: 600; }
   #insights-body .peak-meta { color: #777; font-size: 12px; }
@@ -100,19 +103,19 @@
       <div class="panel panel-default" id="insight-trend-panel">
         <div class="panel-heading"><strong>📈 Traffic Trend</strong></div>
         <div class="panel-body" aria-live="polite">
-          <div class="text-center">
+          <div class="text-center insight-trend-hero">
             <div id="insight-trend-period" class="h2">—</div>
-            <div class="text-muted">Compared with the previous period</div>
+            <div class="text-muted">Overall traffic compared with the previous period</div>
           </div>
           <hr>
           <div class="row">
             <div class="col-sm-6">
-              <strong>🏢 Agency trends</strong>
-              <div id="insight-trend-agencies" class="small" style="margin-top:10px;">—</div>
+              <div class="insight-trend-section-title">🏢 Agency trends</div>
+              <div id="insight-trend-agencies" style="margin-top:10px;">—</div>
             </div>
             <div class="col-sm-6">
-              <strong>📡 Protocol trends</strong>
-              <div id="insight-trend-protocols" class="small" style="margin-top:10px;">—</div>
+              <div class="insight-trend-section-title">📡 Protocol trends</div>
+              <div id="insight-trend-protocols" style="margin-top:10px;">—</div>
             </div>
           </div>
         </div>
