@@ -83,6 +83,12 @@ router.get('/', authHelper.isLoggedInMessages, function (req, res) {
       .groupBy('messages.source')
       .orderBy('count', 'desc')
       .limit(10),
+    messages.clone()
+      .select(db.raw("COALESCE(NULLIF(messages.protocol, ''), 'UNKNOWN') as protocol"))
+      .count('messages.id as count')
+      .groupBy(db.raw("COALESCE(NULLIF(messages.protocol, ''), 'UNKNOWN')"))
+      .orderBy('count', 'desc')
+      .limit(10),
     messages.clone().select('timestamp')
   ]).then(function (results) {
     res.status(200).json({
@@ -94,7 +100,8 @@ router.get('/', authHelper.isLoggedInMessages, function (req, res) {
       topCapcodes: results[4],
       topAgencies: results[5],
       topSources: results[6],
-      activity: buildActivity(results[7], range.start, range.end)
+      topProtocols: results[7],
+      activity: buildActivity(results[8], range.start, range.end)
     });
   }).catch(function (err) {
     res.status(500).json({ error: 'Unable to calculate insights' });
