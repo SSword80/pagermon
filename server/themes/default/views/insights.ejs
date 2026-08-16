@@ -231,7 +231,7 @@ function renderTrends(trends) {
     return;
   }
 
-  $('#insight-trend-period').text(renderTrendValue(trends.period));
+  $('#insight-trend-period').html(renderTrendValue(trends.period));
   $('#insight-trend-agencies').html(renderTrendList(trends.agencies, 'agency'));
   $('#insight-trend-protocols').html(renderTrendList(trends.protocols, 'protocol'));
 }
