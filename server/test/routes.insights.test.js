@@ -69,6 +69,36 @@ describe('GET /api/insights', () => {
             });
     });
 
+    it('should report a spike when current traffic follows zero-traffic history', done => {
+        nconf.set('messages:apiSecurity', false);
+        nconf.save();
+
+        var now = Math.floor(Date.now() / 1000);
+        var currentHour = Math.floor(now / 3600) * 3600;
+
+        db('messages')
+            .del()
+            .then(() => db('messages').insert({
+                address: '9999999',
+                message: 'Anomaly test message',
+                source: 'ANOMALY-TEST',
+                timestamp: currentHour + 60
+            }))
+            .then(() => chai.request(server)
+                .get('/api/insights?start=' + (currentHour - (4 * 3600)) + '&end=' + (currentHour + 3600))
+            )
+            .then(res => {
+                res.status.should.eql(200);
+                res.body.anomaly.status.should.eql('spike');
+                res.body.anomaly.current.should.eql(1);
+                res.body.anomaly.baseline.should.eql(0);
+                res.body.anomaly.percent.should.eql(100);
+                res.body.anomaly.sufficientData.should.eql(true);
+                done();
+            })
+            .catch(done);
+    });
+
     it('should return 400 for an invalid date range', done => {
         nconf.set('messages:apiSecurity', false);
         nconf.save();
