@@ -6,7 +6,24 @@
   #insights-body .insight-controls { text-align: right; }
   #insights-body .insight-controls .btn-group { margin-right: 4px; }
   #insights-body .insight-custom-form .form-group { margin-bottom: 0; }
-  #insights-body #insight-chart { min-height: 300px; }
+  #insights-body #insight-chart { min-height: 300px; position: relative; }
+  #insights-body .insight-chart-point { fill: #337ab7; stroke: #fff; stroke-width: 2; cursor: pointer; outline: none; }
+  #insights-body .insight-chart-point:hover,
+  #insights-body .insight-chart-point:focus { r: 7; stroke: #337ab7; }
+  #insights-body .insight-chart-tooltip {
+    position: absolute;
+    display: none;
+    z-index: 10;
+    max-width: 240px;
+    padding: 7px 10px;
+    background: #333;
+    color: #fff;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 1.4;
+    pointer-events: none;
+    box-shadow: 0 2px 6px rgba(0,0,0,.2);
+  }
   #insights-body .protocol-list { padding: 5px 0 10px; }
   #insights-body .protocol-item { padding: 12px 15px; border-bottom: 1px solid #eee; }
   #insights-body .protocol-item:last-child { border-bottom: 0; }
@@ -296,11 +313,73 @@ function renderInsightChart(activity) {
   if (max < 1) max = 1;
   function x(index) { return padding.left + (activity.length === 1 ? plotWidth / 2 : (index / (activity.length - 1)) * plotWidth); }
   function y(value) { return padding.top + plotHeight - ((Number(value) || 0) / max) * plotHeight; }
-  var points = activity.map(function (point, index) { return x(index) + ',' + y(point.count); }).join(' '), labels = '', labelCount = Math.min(6, activity.length);
+  var points = activity.map(function (point, index) { return x(index) + ',' + y(point.count); }).join(' '), labels = '', pointMarkup = '', labelCount = Math.min(6, activity.length);
   for (var i = 0; i < labelCount; i++) { var index = labelCount === 1 ? 0 : Math.round(i * (activity.length - 1) / (labelCount - 1)); var date = new Date(Number(activity[index].timestamp) * 1000); var label = date.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }); labels += '<text x="' + x(index) + '" y="' + (height - 12) + '" text-anchor="middle" font-size="11" fill="#777">' + label + '</text>'; }
+  activity.forEach(function (point, index) {
+    var date = new Date(Number(point.timestamp) * 1000);
+    var count = Number(point.count) || 0;
+    var label = date.toLocaleString([], {
+      weekday: 'long',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }) + ' — ' + count.toLocaleString() + ' messages';
+
+    pointMarkup += '<circle cx="' + x(index) +
+      '" cy="' + y(count) +
+      '" r="5" class="insight-chart-point" tabindex="0" role="button" aria-label="' +
+      $('<div>').text(label).html() +
+      '" data-label="' + $('<div>').text(label).html() + '"></circle>';
+  });
+
   var yLines = '';
   for (var tick = 0; tick <= 4; tick++) { var value = Math.round(max * tick / 4), lineY = y(value); yLines += '<line x1="' + padding.left + '" y1="' + lineY + '" x2="' + (width - padding.right) + '" y2="' + lineY + '" stroke="#ddd" />'; yLines += '<text x="' + (padding.left - 8) + '" y="' + (lineY + 4) + '" text-anchor="end" font-size="11" fill="#777">' + value + '</text>'; }
-  container.innerHTML = '<svg width="100%" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="Messages over time">' + yLines + '<line x1="' + padding.left + '" y1="' + (padding.top + plotHeight) + '" x2="' + (width - padding.right) + '" y2="' + (padding.top + plotHeight) + '" stroke="#999" /><polyline points="' + points + '" fill="none" stroke="#337ab7" stroke-width="3" />' + labels + '</svg>';
+  container.innerHTML = '<svg width="100%" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="Messages over time">' + yLines + '<line x1="' + padding.left + '" y1="' + (padding.top + plotHeight) + '" x2="' + (width - padding.right) + '" y2="' + (padding.top + plotHeight) + '" stroke="#999" /><polyline points="' + points + '" fill="none" stroke="#337ab7" stroke-width="3" />' + pointMarkup + labels + '</svg>';
+
+  var tooltip = document.createElement('div');
+  tooltip.className = 'insight-chart-tooltip';
+  tooltip.setAttribute('role', 'status');
+  container.appendChild(tooltip);
+
+  function hideTooltip() {
+    tooltip.style.display = 'none';
+  }
+
+  function showTooltip(point) {
+    tooltip.textContent = point.getAttribute('data-label') || '';
+    tooltip.style.display = 'block';
+
+    var pointRect = point.getBoundingClientRect();
+    var containerRect = container.getBoundingClientRect();
+    var left = pointRect.left - containerRect.left + (pointRect.width / 2);
+    var top = pointRect.top - containerRect.top - tooltip.offsetHeight - 8;
+
+    left = Math.max(5, Math.min(left - (tooltip.offsetWidth / 2), containerRect.width - tooltip.offsetWidth - 5));
+    if (top < 5) top = pointRect.bottom - containerRect.top + 8;
+
+    tooltip.style.left = left + 'px';
+    tooltip.style.top = top + 'px';
+  }
+
+  var chartPoints = container.querySelectorAll('.insight-chart-point');
+  chartPoints.forEach(function (point) {
+    point.addEventListener('mouseenter', function () {
+      showTooltip(point);
+    });
+
+    point.addEventListener('mouseleave', hideTooltip);
+
+    point.addEventListener('focus', function () {
+      showTooltip(point);
+    });
+
+    point.addEventListener('blur', hideTooltip);
+
+    point.addEventListener('click', function () {
+      showTooltip(point);
+    });
+  });
 }
 
 function renderActivityHeatmap(activity) {
