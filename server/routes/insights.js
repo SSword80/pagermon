@@ -41,6 +41,25 @@ function buildActivity(rows, start, end) {
   });
 }
 
+function buildPeakActivity(activity) {
+  if (!activity || !activity.length) {
+    return { timestamp: null, count: 0, averagePerHour: 0 };
+  }
+
+  var total = activity.reduce(function (sum, point) {
+    return sum + (Number(point.count) || 0);
+  }, 0);
+  var peak = activity.reduce(function (best, point) {
+    return (Number(point.count) || 0) > (Number(best.count) || 0) ? point : best;
+  }, activity[0]);
+
+  return {
+    timestamp: Number(peak.timestamp),
+    count: Number(peak.count) || 0,
+    averagePerHour: Math.round((total / activity.length) * 10) / 10
+  };
+}
+
 router.get('/', authHelper.isLoggedInMessages, function (req, res) {
   var range = getRange(req);
 
@@ -91,6 +110,9 @@ router.get('/', authHelper.isLoggedInMessages, function (req, res) {
       .limit(10),
     messages.clone().select('timestamp')
   ]).then(function (results) {
+    var activity = buildActivity(results[8], range.start, range.end);
+    var peakActivity = buildPeakActivity(activity);
+
     res.status(200).json({
       range: range,
       messages: Number(results[0][0].count || 0),
@@ -101,7 +123,8 @@ router.get('/', authHelper.isLoggedInMessages, function (req, res) {
       topAgencies: results[5],
       topSources: results[6],
       topProtocols: results[7],
-      activity: buildActivity(results[8], range.start, range.end)
+      activity: activity,
+      peakActivity: peakActivity
     });
   }).catch(function (err) {
     res.status(500).json({ error: 'Unable to calculate insights' });
