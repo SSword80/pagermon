@@ -214,6 +214,36 @@
       </div>
     </div>
   </div>
+  <div class="row">
+    <div class="col-xs-12">
+      <div class="panel panel-default insight-live-feed">
+        <div class="panel-heading">
+          <strong>⚡ Live Activity</strong>
+          <span id="insight-live-feed-status" class="pull-right text-muted">Connecting…</span>
+        </div>
+        <div class="panel-body" style="padding:0;">
+          <div id="insight-live-feed" aria-live="polite" aria-label="Live message activity">
+            <div class="text-muted text-center" style="padding:20px;">Waiting for live messages…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row" id="insight-message-detail" style="display:none;">
+    <div class="col-xs-12">
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <strong>🔎 Messages in selected period</strong>
+          <button type="button" class="btn btn-xs btn-default pull-right" id="insight-message-detail-close">Close</button>
+        </div>
+        <div class="panel-body">
+          <div id="insight-message-detail-summary" class="text-muted" aria-live="polite"></div>
+          <div id="insight-message-detail-content" style="margin-top:10px;" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <div class="row">
     <div class="col-xs-12">
@@ -382,6 +412,62 @@ function renderInsightChart(activity) {
   });
 }
 
+function escapeInsightHtml(value) {
+  return $('<div>').text(value == null ? '' : String(value)).html();
+}
+
+function renderLiveMessage(message, isNew) {
+  var timestamp = Number(message.timestamp);
+  var date = timestamp ? new Date(timestamp * 1000) : new Date();
+  var time = date.toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+
+  var agency = message.agency || 'UNKNOWN';
+  var alias = message.alias || '';
+  var address = message.address || '—';
+  var source = message.source || '';
+
+  var title = agency;
+  if (alias) title += ' — ' + alias;
+
+  var html = '<div class="insight-live-item' + (isNew ? ' new' : '') + '">' +
+    '<div>' +
+      '<span class="insight-live-time">' + escapeInsightHtml(time) + '</span>' +
+      '<span class="insight-live-agency">' + escapeInsightHtml(title) + '</span>' +
+      '<span class="insight-live-address">' + escapeInsightHtml(address) + '</span>' +
+    '</div>' +
+    '<div class="insight-live-message" title="' + escapeInsightHtml(message.message || '') + '">' +
+      escapeInsightHtml(message.message || 'No message text') +
+    '</div>' +
+    (source ? '<div class="text-muted" style="font-size:11px;">' + escapeInsightHtml(source) + '</div>' : '') +
+  '</div>';
+
+  return html;
+}
+
+function addLiveInsightMessage(message) {
+  var container = document.getElementById('insight-live-feed');
+  if (!container) return;
+
+  var waiting = container.querySelector('.text-muted.text-center');
+  if (waiting) container.innerHTML = '';
+
+  container.insertAdjacentHTML('afterbegin', renderLiveMessage(message, true));
+
+  var items = container.querySelectorAll('.insight-live-item');
+  for (var i = 30; i < items.length; i++) {
+    items[i].remove();
+  }
+
+  window.setTimeout(function () {
+    var first = container.querySelector('.insight-live-item');
+    if (first) first.classList.remove('new');
+  }, 1200);
+}
+
 function renderActivityHeatmap(activity) {
   var container = document.getElementById('insight-heatmap');
   var days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -542,6 +628,47 @@ function renderAnomaly(anomaly) {
   $('.insight-anomaly').removeClass('normal spike drop').addClass(status);
 }
 
+function connectInsightLiveFeed() {
+  var status = document.getElementById('insight-live-feed-status');
+
+  if (typeof io !== 'function') {
+    if (status) status.textContent = 'Unavailable';
+    return;
+  }
+
+  var insightSocket = io({
+    transports: ['websocket'],
+    upgrade: false
+  });
+
+  insightSocket.on('connect', function () {
+    if (status) {
+      status.textContent = '🟢 LIVE';
+      status.className = 'pull-right text-success insight-live-status';
+    }
+  });
+
+  insightSocket.on('disconnect', function () {
+    if (status) {
+      status.textContent = '⚪ Disconnected';
+      status.className = 'pull-right text-muted insight-live-status';
+    }
+  });
+
+  insightSocket.on('connect_error', function () {
+    if (status) {
+      status.textContent = '🔴 Connection error';
+      status.className = 'pull-right text-danger insight-live-status';
+    }
+  });
+
+  insightSocket.on('messagePost', function (message) {
+    addLiveInsightMessage(message);
+  });
+
+  return insightSocket;
+}
+
 function loadInsights() {
   var range = insightRange();
   $.getJSON('/api/insights?start=' + range.start + '&end=' + range.end)
@@ -599,6 +726,7 @@ $(function () {
   });
 
   $('.insight-range[data-days="1"]').addClass('active');
+  connectInsightLiveFeed();
   loadInsights();
 });
 </script>
