@@ -112,6 +112,9 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  #insights-body #insight-live-feed-new {
+    white-space: nowrap;
+  }
 
   #insights-body .insight-live-pulse { border-left: 4px solid #777; }
   #insights-body .insight-live-pulse.active { border-left-color: #3c763d; }
@@ -306,6 +309,9 @@
         <div class="panel-heading">
           <strong>⚡ Live Activity</strong>
           <button type="button" class="btn btn-xs btn-default pull-right" id="insight-live-feed-clear" style="margin-left:8px;">Clear Messages</button>
+          <button type="button" class="btn btn-xs btn-primary pull-right" id="insight-live-feed-new" style="display:none; margin-left:8px;">
+            <i class="fa fa-arrow-left"></i> <span id="insight-live-feed-new-count">New messages</span>
+          </button>
           <span id="insight-live-feed-status" class="pull-right text-muted">Connecting…</span>
         </div>
         <div class="panel-body" style="padding:0;">
@@ -665,6 +671,49 @@ function clearLiveInsightMessages() {
   }
 }
 
+var insightNewLiveMessages = 0;
+
+function isLiveFeedAtNewest() {
+  var container = document.getElementById('insight-live-feed');
+  if (!container) return true;
+
+  return container.scrollLeft <= 5;
+}
+
+function updateNewLiveMessageIndicator() {
+  var button = document.getElementById('insight-live-feed-new');
+  var count = document.getElementById('insight-live-feed-new-count');
+
+  if (!button || !count) return;
+
+  if (insightNewLiveMessages > 0) {
+    count.textContent = insightNewLiveMessages === 1
+      ? '1 New message'
+      : insightNewLiveMessages + ' New messages';
+
+    button.style.display = '';
+  } else {
+    button.style.display = 'none';
+  }
+}
+
+function clearNewLiveMessageIndicator() {
+  insightNewLiveMessages = 0;
+  updateNewLiveMessageIndicator();
+}
+
+function showNewestLiveMessages() {
+  var container = document.getElementById('insight-live-feed');
+  if (!container) return;
+
+  container.scrollTo({
+    left: 0,
+    behavior: 'smooth'
+  });
+
+  clearNewLiveMessageIndicator();
+}
+
 function addLiveInsightMessage(message) {
   var container = document.getElementById('insight-live-feed');
   if (!container) return;
@@ -684,6 +733,8 @@ function addLiveInsightMessage(message) {
   var waiting = container.querySelector('.text-muted.text-center');
   if (waiting) container.innerHTML = '';
 
+  var wasAtNewest = isLiveFeedAtNewest();
+
   container.insertAdjacentHTML('afterbegin', renderLiveMessage(message, true));
 
   var items = container.querySelectorAll('.insight-live-item');
@@ -691,7 +742,13 @@ function addLiveInsightMessage(message) {
     items[i].remove();
   }
 
-  container.scrollLeft = 0;
+  if (wasAtNewest) {
+    container.scrollLeft = 0;
+    clearNewLiveMessageIndicator();
+  } else {
+    insightNewLiveMessages++;
+    updateNewLiveMessageIndicator();
+  }
 
   window.setTimeout(function () {
     var first = container.querySelector('.insight-live-item');
@@ -1053,6 +1110,11 @@ $(function () {
 
   $('#insight-live-feed-clear').on('click', function () {
     clearLiveInsightMessages();
+    clearNewLiveMessageIndicator();
+  });
+
+  $('#insight-live-feed-new').on('click', function () {
+    showNewestLiveMessages();
   });
 
   restoreLiveInsightMessages();
