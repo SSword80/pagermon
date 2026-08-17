@@ -149,8 +149,24 @@
     #insights-body .insight-toolbar { margin-top: 10px; }
     #insights-body .insight-title { float: none !important; }
     #insights-body .insight-controls { float: none !important; text-align: left; margin-top: 15px; }
-    #insights-body .insight-controls .btn-group { display: inline-flex; margin-bottom: 5px; }
-    #insights-body .insight-controls .btn { padding-left: 10px; padding-right: 10px; }
+    #insights-body .insight-controls .btn-group {
+      display: flex;
+      width: 100%;
+      margin: 0 0 8px 0;
+    }
+    #insights-body .insight-controls .btn-group .btn {
+      flex: 1 1 auto;
+    }
+    #insights-body .insight-controls > #insight-refresh,
+    #insights-body .insight-controls > #insight-custom-toggle {
+      display: block;
+      width: 100%;
+      margin: 0 0 8px 0;
+    }
+    #insights-body .insight-controls .btn {
+      padding-left: 10px;
+      padding-right: 10px;
+    }
     #insights-body .insight-custom-form .form-group { display: block; margin: 0 0 10px 0 !important; }
     #insights-body .insight-custom-form .form-control { width: 100%; }
     #insights-body .insight-custom-form .btn { margin-left: 0 !important; width: 100%; }
