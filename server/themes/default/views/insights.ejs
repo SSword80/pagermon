@@ -254,6 +254,7 @@
           <button type="button" class="btn btn-default" id="insight-export">
             <i class="fa fa-download"></i> Export CSV
           </button>
+          <span id="insight-export-range" class="text-muted" style="display:inline-block; margin-left:6px; font-size:11px; vertical-align:middle;"></span>
           <button type="button" class="btn btn-default" id="insight-custom-toggle">Custom</button>
         </div>
       </div>
@@ -441,6 +442,26 @@ function insightRange() {
   if (insightCustomRange) return insightCustomRange;
   var end = Math.floor(Date.now() / 1000);
   return { start: end - (insightDays * 24 * 60 * 60), end: end };
+}
+
+function updateInsightExportRangeLabel() {
+  var label = document.getElementById('insight-export-range');
+  if (!label) return;
+
+  var range = insightRange();
+  var start = new Date(Number(range.start) * 1000);
+  var end = new Date(Number(range.end) * 1000);
+
+  var format = function (date) {
+    return date.toLocaleString([], {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  label.textContent = format(start) + ' → ' + format(end);
 }
 
 function toDateTimeLocal(timestamp) {
@@ -1323,6 +1344,7 @@ $(function () {
     $('.insight-range').removeClass('active');
     $(this).addClass('active');
     $('#insight-custom').hide();
+    updateInsightExportRangeLabel();
     loadInsights();
   });
 
@@ -1345,10 +1367,12 @@ $(function () {
     }
     insightCustomRange = { start: Math.floor(start), end: Math.floor(end) };
     $('.insight-range').removeClass('active');
+    updateInsightExportRangeLabel();
     loadInsights();
   });
 
   $('.insight-range[data-days="1"]').addClass('active');
+  updateInsightExportRangeLabel();
   bindLiveInsightClicks();
   connectInsightLiveFeed();
   loadInsights();
