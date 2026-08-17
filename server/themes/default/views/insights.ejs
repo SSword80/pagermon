@@ -177,6 +177,9 @@
             <button type="button" class="btn btn-default insight-range" data-days="7">7 days</button>
             <button type="button" class="btn btn-default insight-range" data-days="30">30 days</button>
           </div>
+          <button type="button" class="btn btn-default" id="insight-refresh">
+            <i class="fa fa-refresh"></i> Refresh Data
+          </button>
           <button type="button" class="btn btn-default" id="insight-custom-toggle">Custom</button>
         </div>
       </div>
@@ -932,6 +935,18 @@ function connectInsightLiveFeed() {
   return insightSocket;
 }
 
+var insightAutoRefreshTimer = null;
+
+function startInsightAutoRefresh() {
+  if (insightAutoRefreshTimer) {
+    window.clearInterval(insightAutoRefreshTimer);
+  }
+
+  insightAutoRefreshTimer = window.setInterval(function () {
+    loadInsights();
+  }, 30000);
+}
+
 function loadInsights() {
   var range = insightRange();
   $.getJSON('/api/insights?start=' + range.start + '&end=' + range.end)
@@ -957,6 +972,21 @@ function loadInsights() {
 }
 
 $(function () {
+  $('#insight-refresh').on('click', function () {
+    var button = $(this);
+    var icon = button.find('i');
+
+    button.prop('disabled', true);
+    icon.addClass('fa-spin');
+
+    loadInsights();
+
+    window.setTimeout(function () {
+      button.prop('disabled', false);
+      icon.removeClass('fa-spin');
+    }, 1000);
+  });
+
   $('#insight-message-detail-close').on('click', function () {
     $('#insight-message-detail').hide();
   });
@@ -1002,6 +1032,7 @@ $(function () {
   bindLiveInsightClicks();
   connectInsightLiveFeed();
   loadInsights();
+  startInsightAutoRefresh();
 });
 </script>
 </body>
