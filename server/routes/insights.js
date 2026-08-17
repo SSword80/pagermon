@@ -2,6 +2,7 @@ var express = require('express');
 var router = express.Router();
 var db = require('../knex/knex.js');
 var authHelper = require('../middleware/authhelper');
+var converter = require('json-2-csv');
 
 function getRange(req) {
   var now = Math.floor(Date.now() / 1000);
@@ -132,6 +133,64 @@ router.get('/messages', authHelper.isLoggedInMessages, function (req, res) {
     })
     .catch(function () {
       res.status(500).json({ error: 'Unable to load insight messages' });
+    });
+});
+
+router.get('/export', authHelper.isLoggedInMessages, function (req, res) {
+  var range = getRange(req);
+
+  if (!range || (range.end - range.start) > (24 * 60 * 60)) {
+    return res.status(400).json({ error: 'Invalid export range' });
+  }
+
+  db('messages')
+    .leftJoin('capcodes', 'capcodes.id', 'messages.alias_id')
+    .select(
+      'messages.id',
+      'messages.timestamp',
+      'messages.address',
+      'capcodes.alias',
+      'capcodes.agency',
+      'messages.source',
+      'messages.protocol',
+      'messages.message'
+    )
+    .where('messages.timestamp', '>=', range.start)
+    .andWhere('messages.timestamp', '<=', range.end)
+    .orderBy('messages.timestamp', 'desc')
+    .then(function (rows) {
+      var exportRows = rows.map(function (row) {
+        return {
+          id: row.id,
+          timestamp: row.timestamp,
+          address: row.address || '',
+          alias: row.alias || '',
+          agency: row.agency || '',
+          source: row.source || '',
+          protocol: row.protocol || '',
+          message: row.message || ''
+        };
+      });
+
+      converter.json2csv(exportRows, function (err, csv) {
+        if (err) {
+          return res.status(500).json({ error: 'Unable to export insight messages' });
+        }
+
+        var filename = 'pagermon-insights-' +
+          range.start + '-' + range.end + '.csv';
+
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader(
+          'Content-Disposition',
+          'attachment; filename="' + filename + '"'
+        );
+
+        res.status(200).send(csv);
+      });
+    })
+    .catch(function () {
+      res.status(500).json({ error: 'Unable to export insight messages' });
     });
 });
 

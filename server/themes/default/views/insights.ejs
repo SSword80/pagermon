@@ -251,6 +251,9 @@
           <button type="button" class="btn btn-default" id="insight-refresh">
             <i class="fa fa-refresh"></i> Refresh Data
           </button>
+          <button type="button" class="btn btn-default" id="insight-export">
+            <i class="fa fa-download"></i> Export CSV
+          </button>
           <button type="button" class="btn btn-default" id="insight-custom-toggle">Custom</button>
         </div>
       </div>
@@ -1268,6 +1271,27 @@ $(function () {
       button.prop('disabled', false);
       icon.removeClass('fa-spin');
     }, 1000);
+  });
+
+  $('#insight-export').on('click', function () {
+    var range = insightRange();
+    var button = $(this);
+    var icon = button.find('i');
+
+    button.prop('disabled', true);
+    icon.removeClass('fa-download').addClass('fa-spinner fa-spin');
+
+    var url = '/api/insights/export?start=' +
+      encodeURIComponent(range.start) +
+      '&end=' +
+      encodeURIComponent(range.end);
+
+    window.location.href = url;
+
+    window.setTimeout(function () {
+      button.prop('disabled', false);
+      icon.removeClass('fa-spinner fa-spin').addClass('fa-download');
+    }, 1500);
   });
 
   $('#insight-message-detail-close').on('click', function () {
