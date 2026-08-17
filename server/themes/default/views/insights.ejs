@@ -283,6 +283,7 @@
       <div class="panel panel-default insight-live-feed">
         <div class="panel-heading">
           <strong>⚡ Live Activity</strong>
+          <button type="button" class="btn btn-xs btn-default pull-right" id="insight-live-feed-clear" style="margin-left:8px;">Clear Messages</button>
           <span id="insight-live-feed-status" class="pull-right text-muted">Connecting…</span>
         </div>
         <div class="panel-body" style="padding:0;">
@@ -571,9 +572,92 @@ function showLiveInsightMessage(message) {
   panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
+var INSIGHT_LIVE_STORAGE_KEY = 'pagermon.insights.liveMessages';
+var INSIGHT_LIVE_MAX_MESSAGES = 30;
+
+function getLiveInsightMessageKey(message) {
+  if (message && message.id != null) {
+    return 'id:' + String(message.id);
+  }
+
+  return 'msg:' +
+    String(message && message.timestamp || '') + ':' +
+    String(message && message.address || '') + ':' +
+    String(message && message.message || '');
+}
+
+function saveLiveInsightMessages(messages) {
+  try {
+    localStorage.setItem(
+      INSIGHT_LIVE_STORAGE_KEY,
+      JSON.stringify(messages.slice(0, INSIGHT_LIVE_MAX_MESSAGES))
+    );
+  } catch (error) {
+    console.log('Unable to save live Insights messages.', error);
+  }
+}
+
+function getSavedLiveInsightMessages() {
+  try {
+    var saved = localStorage.getItem(INSIGHT_LIVE_STORAGE_KEY);
+    if (!saved) return [];
+
+    var messages = JSON.parse(saved);
+
+    if (!Array.isArray(messages)) return [];
+
+    return messages.slice(0, INSIGHT_LIVE_MAX_MESSAGES);
+  } catch (error) {
+    console.log('Unable to restore live Insights messages.', error);
+    return [];
+  }
+}
+
+function restoreLiveInsightMessages() {
+  var container = document.getElementById('insight-live-feed');
+  if (!container) return;
+
+  var messages = getSavedLiveInsightMessages();
+
+  if (!messages.length) return;
+
+  container.innerHTML = messages.map(function (message) {
+    return renderLiveMessage(message, false);
+  }).join('');
+
+  container.scrollLeft = 0;
+}
+
+function clearLiveInsightMessages() {
+  var container = document.getElementById('insight-live-feed');
+
+  try {
+    localStorage.removeItem(INSIGHT_LIVE_STORAGE_KEY);
+  } catch (error) {
+    console.log('Unable to clear saved live Insights messages.', error);
+  }
+
+  if (container) {
+    container.innerHTML =
+      '<div class="text-muted text-center" style="padding:20px; min-width:100%;">Waiting for live messages…</div>';
+  }
+}
+
 function addLiveInsightMessage(message) {
   var container = document.getElementById('insight-live-feed');
   if (!container) return;
+
+  var messages = getSavedLiveInsightMessages();
+  var newKey = getLiveInsightMessageKey(message);
+
+  messages = messages.filter(function (item) {
+    return getLiveInsightMessageKey(item) !== newKey;
+  });
+
+  messages.unshift(message);
+  messages = messages.slice(0, INSIGHT_LIVE_MAX_MESSAGES);
+
+  saveLiveInsightMessages(messages);
 
   var waiting = container.querySelector('.text-muted.text-center');
   if (waiting) container.innerHTML = '';
@@ -581,15 +665,18 @@ function addLiveInsightMessage(message) {
   container.insertAdjacentHTML('afterbegin', renderLiveMessage(message, true));
 
   var items = container.querySelectorAll('.insight-live-item');
-  for (var i = 30; i < items.length; i++) {
+  for (var i = INSIGHT_LIVE_MAX_MESSAGES; i < items.length; i++) {
     items[i].remove();
   }
+
+  container.scrollLeft = 0;
 
   window.setTimeout(function () {
     var first = container.querySelector('.insight-live-item');
     if (first) first.classList.remove('new');
   }, 1200);
 }
+
 
 function bindLiveInsightClicks() {
   var container = document.getElementById('insight-live-feed');
@@ -859,6 +946,12 @@ $(function () {
   $('#insight-message-detail-close').on('click', function () {
     $('#insight-message-detail').hide();
   });
+
+  $('#insight-live-feed-clear').on('click', function () {
+    clearLiveInsightMessages();
+  });
+
+  restoreLiveInsightMessages();
 
   $('.insight-range').on('click', function () {
     insightCustomRange = null;
