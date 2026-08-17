@@ -950,7 +950,13 @@ function startInsightAutoRefresh() {
   }, 30000);
 }
 
+var insightLoading = false;
+
 function loadInsights() {
+  if (insightLoading) return;
+
+  insightLoading = true;
+
   var range = insightRange();
   $.getJSON('/api/insights?start=' + range.start + '&end=' + range.end)
     .done(function (data) {
@@ -992,6 +998,9 @@ function loadInsights() {
         .removeClass('text-success')
         .addClass('text-danger')
         .html('<i class="fa fa-exclamation-circle"></i> Data refresh failed');
+    })
+    .always(function () {
+      insightLoading = false;
     });
 }
 
