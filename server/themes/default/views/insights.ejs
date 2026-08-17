@@ -116,6 +116,44 @@
     white-space: nowrap;
   }
 
+  #insights-body #insight-message-detail-content {
+    max-height: 520px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  #insights-body .insight-hour-message {
+    margin-bottom: 8px;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    background: #fafafa;
+  }
+  #insights-body .insight-hour-message:last-child {
+    margin-bottom: 0;
+  }
+  #insights-body .insight-hour-message-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+  #insights-body .insight-hour-message-time {
+    font-weight: 600;
+  }
+  #insights-body .insight-hour-message-meta {
+    color: #777;
+    font-size: 11px;
+    margin-top: 4px;
+  }
+  #insights-body .insight-hour-message-text {
+    margin-top: 8px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  #insights-body .insight-detail-controls {
+    margin-top: 8px;
+  }
+
   #insights-body .insight-live-pulse { border-left: 4px solid #777; }
   #insights-body .insight-live-pulse.active { border-left-color: #3c763d; }
   #insights-body .insight-live-pulse.quiet { border-left-color: #f0ad4e; }
@@ -332,6 +370,12 @@
         </div>
         <div class="panel-body">
           <div id="insight-message-detail-summary" class="text-muted" aria-live="polite"></div>
+          <div class="insight-detail-controls">
+            <div class="btn-group btn-group-xs" role="group" aria-label="Message order">
+              <button type="button" class="btn btn-default active" id="insight-detail-newest">Newest</button>
+              <button type="button" class="btn btn-default" id="insight-detail-oldest">Oldest</button>
+            </div>
+          </div>
           <div id="insight-message-detail-content" style="margin-top:10px;" aria-live="polite"></div>
         </div>
       </div>
@@ -508,6 +552,56 @@ function renderInsightChart(activity) {
   });
 }
 
+var insightDetailMessages = [];
+var insightDetailOrder = 'newest';
+
+function renderInsightDetailMessages() {
+  var content = document.getElementById('insight-message-detail-content');
+  if (!content) return;
+
+  var messages = insightDetailMessages.slice();
+
+  messages.sort(function (a, b) {
+    return insightDetailOrder === 'oldest'
+      ? Number(a.timestamp || 0) - Number(b.timestamp || 0)
+      : Number(b.timestamp || 0) - Number(a.timestamp || 0);
+  });
+
+  content.innerHTML = messages.map(function (message) {
+    var time = Number(message.timestamp)
+      ? new Date(Number(message.timestamp) * 1000).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        })
+      : 'Unknown';
+
+    var agency = message.agency || 'UNKNOWN';
+    var address = message.address || '—';
+    var source = message.source || '';
+    var protocol = message.protocol || '';
+
+    return '<div class="insight-hour-message">' +
+      '<div class="insight-hour-message-header">' +
+        '<span class="insight-hour-message-time">' +
+          escapeInsightHtml(time) +
+        '</span>' +
+        '<span class="text-muted">' +
+          escapeInsightHtml(agency) +
+        '</span>' +
+      '</div>' +
+      '<div class="insight-hour-message-meta">' +
+        escapeInsightHtml(address) +
+        (source ? ' · ' + escapeInsightHtml(source) : '') +
+        (protocol ? ' · ' + escapeInsightHtml(protocol) : '') +
+      '</div>' +
+      '<div class="insight-hour-message-text">' +
+        escapeInsightHtml(message.message || 'No message text') +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
 function showInsightHourMessages(timestamp) {
   var panel = document.getElementById('insight-message-detail');
   var summary = document.getElementById('insight-message-detail-summary');
@@ -545,36 +639,8 @@ function showInsightHourMessages(timestamp) {
         return;
       }
 
-      content.innerHTML = messages.map(function (message) {
-        var time = Number(message.timestamp)
-          ? new Date(Number(message.timestamp) * 1000).toLocaleTimeString([], {
-              hour: '2-digit',
-              minute: '2-digit',
-              second: '2-digit'
-            })
-          : 'Unknown';
-
-        var agency = message.agency || 'UNKNOWN';
-        var address = message.address || '—';
-        var source = message.source || '';
-        var protocol = message.protocol || '';
-
-        return '<div class="well well-sm" style="margin-bottom:8px;">' +
-          '<div>' +
-            '<strong>' + escapeInsightHtml(time) + '</strong> · ' +
-            escapeInsightHtml(agency) + ' · ' +
-            escapeInsightHtml(address) +
-          '</div>' +
-          '<div style="margin-top:5px; white-space:pre-wrap;">' +
-            escapeInsightHtml(message.message || 'No message text') +
-          '</div>' +
-          '<div class="text-muted" style="font-size:11px; margin-top:5px;">' +
-            (source ? escapeInsightHtml(source) : '') +
-            (source && protocol ? ' · ' : '') +
-            (protocol ? escapeInsightHtml(protocol) : '') +
-          '</div>' +
-        '</div>';
-      }).join('');
+      insightDetailMessages = messages;
+      renderInsightDetailMessages();
 
       panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     })
@@ -1168,6 +1234,15 @@ function loadInsights() {
     });
 }
 
+function setInsightDetailOrder(order) {
+  insightDetailOrder = order;
+
+  $('#insight-detail-newest').toggleClass('active', order === 'newest');
+  $('#insight-detail-oldest').toggleClass('active', order === 'oldest');
+
+  renderInsightDetailMessages();
+}
+
 $(function () {
   $('#insight-refresh').on('click', function () {
     var button = $(this);
@@ -1186,6 +1261,14 @@ $(function () {
 
   $('#insight-message-detail-close').on('click', function () {
     $('#insight-message-detail').hide();
+  });
+
+  $('#insight-detail-newest').on('click', function () {
+    setInsightDetailOrder('newest');
+  });
+
+  $('#insight-detail-oldest').on('click', function () {
+    setInsightDetailOrder('oldest');
   });
 
   $('#insight-live-feed-clear').on('click', function () {
