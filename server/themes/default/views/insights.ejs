@@ -877,6 +877,19 @@ function renderAnomaly(anomaly) {
   $('.insight-anomaly').removeClass('normal spike drop').addClass(status);
 }
 
+var insightRefreshTimer = null;
+
+function scheduleInsightRefresh() {
+  if (insightRefreshTimer) {
+    window.clearTimeout(insightRefreshTimer);
+  }
+
+  insightRefreshTimer = window.setTimeout(function () {
+    insightRefreshTimer = null;
+    loadInsights();
+  }, 1500);
+}
+
 function connectInsightLiveFeed() {
   var status = document.getElementById('insight-live-feed-status');
 
@@ -913,6 +926,7 @@ function connectInsightLiveFeed() {
 
   insightSocket.on('messagePost', function (message) {
     addLiveInsightMessage(message);
+    scheduleInsightRefresh();
   });
 
   return insightSocket;
