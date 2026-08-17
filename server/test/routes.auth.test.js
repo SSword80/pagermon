@@ -22,7 +22,10 @@ nconf.file({ file: confFile });
 nconf.load();
 // set required settings in config file
 
-beforeEach(() => db.migrate.rollback().then(() => db.migrate.latest().then(() => db.seed.run())));
+beforeEach(() => db.migrate.rollback()
+        .then(() => db.migrate.latest())
+        .then(() => db.seed.run())
+        .then(() => db('protection').del()));
 
 afterEach(() => db.migrate.rollback().then(() => passportStub.logout()));
 
@@ -131,27 +134,29 @@ describe('POST /auth/login', () => {
                         });
         });
         it('should return a 429 with too many invalid attempts', done => {
-                chai.request(server)
-                        .post('/auth/login')
-                        .send({
-                                username: 'admindisabled',
-                                password: 'changeme',
+                var request = function() {
+                        return chai.request(server)
+                                .post('/auth/login')
+                                .send({
+                                        username: 'admindisabled',
+                                        password: 'changeme',
+                                });
+                };
+
+                request()
+                        .then(() => request())
+                        .then(() => request())
+                        .then(() => request())
+                        .then(() => request())
+                        .then(() => request())
+                        .then(() => request())
+                        .then(res => {
+                                res.status.should.eql(429);
+                                res.body.status.should.eql('lockedout');
+                                res.body.error.should.eql('Too many attempts, please try again later');
+                                done();
                         })
-                        .then(function() {
-                                chai.request(server)
-                                        .post('/auth/login')
-                                        .send({
-                                                username: 'admindisabled',
-                                                password: 'changeme',
-                                        })
-                                        .end((err, res) => {
-                                                should.not.exist(err);
-                                                res.status.should.eql(429);
-                                                res.body.status.should.eql('lockedout');
-                                                res.body.error.should.eql('Too many attempts, please try again later');
-                                                done();
-                                        });
-                        });
+                        .catch(done);
         });
 });
 
