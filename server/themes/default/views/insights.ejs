@@ -946,6 +946,17 @@ function startInsightAutoRefresh() {
   }
 
   insightAutoRefreshTimer = window.setInterval(function () {
+    var detailPanel = document.getElementById('insight-message-detail');
+    var liveFeed = document.getElementById('insight-live-feed');
+
+    if (detailPanel && detailPanel.style.display !== 'none') {
+      return;
+    }
+
+    if (liveFeed && liveFeed.matches(':hover')) {
+      return;
+    }
+
     loadInsights();
   }, 30000);
 }
