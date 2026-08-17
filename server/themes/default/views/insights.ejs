@@ -453,7 +453,9 @@ function renderInsightChart(activity) {
       '" cy="' + y(count) +
       '" r="5" class="insight-chart-point" tabindex="0" role="button" aria-label="' +
       $('<div>').text(label).html() +
-      '" data-label="' + $('<div>').text(label).html() + '"></circle>';
+      '" data-label="' + $('<div>').text(label).html() +
+      '" data-insight-timestamp="' + $('<div>').text(point.timestamp || '').html() +
+      '"></circle>';
   });
 
   var yLines = '';
@@ -501,8 +503,86 @@ function renderInsightChart(activity) {
 
     point.addEventListener('click', function () {
       showTooltip(point);
+      showInsightHourMessages(point.getAttribute('data-insight-timestamp'));
     });
   });
+}
+
+function showInsightHourMessages(timestamp) {
+  var panel = document.getElementById('insight-message-detail');
+  var summary = document.getElementById('insight-message-detail-summary');
+  var content = document.getElementById('insight-message-detail-content');
+
+  if (!panel || !summary || !content || !timestamp) return;
+
+  var start = Math.floor(Number(timestamp) / 3600) * 3600;
+  var end = start + 3599;
+
+  content.innerHTML = '<div class="text-muted">Loading messages…</div>';
+  panel.style.display = '';
+
+  $.getJSON('/api/insights/messages?start=' + start + '&end=' + end)
+    .done(function (data) {
+      var messages = data.messages || [];
+      var date = new Date(start * 1000);
+      var period = date.toLocaleString([], {
+        weekday: 'short',
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit'
+      });
+
+      summary.innerHTML =
+        '<strong>' + escapeInsightHtml(period) + '</strong> · ' +
+        escapeInsightHtml(String(data.count || messages.length)) +
+        ' messages' +
+        (data.truncated ? ' · showing latest 50' : '');
+
+      if (!messages.length) {
+        content.innerHTML =
+          '<div class="text-muted">No messages were recorded during this hour.</div>';
+        return;
+      }
+
+      content.innerHTML = messages.map(function (message) {
+        var time = Number(message.timestamp)
+          ? new Date(Number(message.timestamp) * 1000).toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit'
+            })
+          : 'Unknown';
+
+        var agency = message.agency || 'UNKNOWN';
+        var address = message.address || '—';
+        var source = message.source || '';
+        var protocol = message.protocol || '';
+
+        return '<div class="well well-sm" style="margin-bottom:8px;">' +
+          '<div>' +
+            '<strong>' + escapeInsightHtml(time) + '</strong> · ' +
+            escapeInsightHtml(agency) + ' · ' +
+            escapeInsightHtml(address) +
+          '</div>' +
+          '<div style="margin-top:5px; white-space:pre-wrap;">' +
+            escapeInsightHtml(message.message || 'No message text') +
+          '</div>' +
+          '<div class="text-muted" style="font-size:11px; margin-top:5px;">' +
+            (source ? escapeInsightHtml(source) : '') +
+            (source && protocol ? ' · ' : '') +
+            (protocol ? escapeInsightHtml(protocol) : '') +
+          '</div>' +
+        '</div>';
+      }).join('');
+
+      panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    })
+    .fail(function () {
+      summary.innerHTML = '<strong>Unable to load messages</strong>';
+      content.innerHTML =
+        '<div class="alert alert-danger">Unable to load messages for this hour.</div>';
+    });
 }
 
 function escapeInsightHtml(value) {
