@@ -17,15 +17,52 @@ passportStub.install(server);
 nconf.file({ file: confFile });
 nconf.load();
 
+function login() {
+    passportStub.login({
+        username: 'useractive',
+        password: 'changeme',
+    });
+}
+
 beforeEach(() => db.migrate.rollback().then(() => db.migrate.latest().then(() => db.seed.run())));
 
 afterEach(() => db.migrate.rollback().then(() => passportStub.logout()));
 
+describe('Insights authentication', () => {
+    it('should reject unauthenticated access to insights', done => {
+        chai.request(server)
+            .get('/api/insights?start=1529487000&end=1529500000')
+            .end((err, res) => {
+                should.not.exist(err);
+                res.status.should.eql(401);
+                done();
+            });
+    });
+
+    it('should reject unauthenticated access to insight messages', done => {
+        chai.request(server)
+            .get('/api/insights/messages?start=1529487000&end=1529490000')
+            .end((err, res) => {
+                should.not.exist(err);
+                res.status.should.eql(401);
+                done();
+            });
+    });
+
+    it('should reject unauthenticated access to insight export', done => {
+        chai.request(server)
+            .get('/api/insights/export?start=1529487000&end=1529490000')
+            .end((err, res) => {
+                should.not.exist(err);
+                res.status.should.eql(401);
+                done();
+            });
+    });
+});
+
 describe('GET /api/insights/messages', () => {
     it('should return messages for a selected hourly range', done => {
-        nconf.set('messages:apiSecurity', false);
-        nconf.save();
-
+        login();
         db('messages')
             .orderBy('id', 'asc')
             .then(rows => {
@@ -60,9 +97,7 @@ describe('GET /api/insights/messages', () => {
     });
 
     it('should return 400 for a message range longer than one hour', done => {
-        nconf.set('messages:apiSecurity', false);
-        nconf.save();
-
+        login();
         chai.request(server)
             .get('/api/insights/messages?start=1529487000&end=1529490601')
             .end((err, res) => {
@@ -74,9 +109,7 @@ describe('GET /api/insights/messages', () => {
     });
 
     it('should return 400 for an invalid message range', done => {
-        nconf.set('messages:apiSecurity', false);
-        nconf.save();
-
+        login();
         chai.request(server)
             .get('/api/insights/messages?start=1529500000&end=1529487000')
             .end((err, res) => {
@@ -90,9 +123,7 @@ describe('GET /api/insights/messages', () => {
 
 describe('GET /api/insights', () => {
     it('should return message insights for a requested range', done => {
-        nconf.set('messages:apiSecurity', false);
-        nconf.save();
-
+        login();
         chai.request(server)
             .get('/api/insights?start=1529487000&end=1529500000')
             .end((err, res) => {
@@ -137,9 +168,7 @@ describe('GET /api/insights', () => {
     });
 
     it('should report a spike when current traffic follows zero-traffic history', done => {
-        nconf.set('messages:apiSecurity', false);
-        nconf.save();
-
+        login();
         var now = Math.floor(Date.now() / 1000);
         var currentHour = Math.floor(now / 3600) * 3600;
 
@@ -167,9 +196,7 @@ describe('GET /api/insights', () => {
     });
 
     it('should return 400 for an invalid date range', done => {
-        nconf.set('messages:apiSecurity', false);
-        nconf.save();
-
+        login();
         chai.request(server)
             .get('/api/insights?start=1529500000&end=1529487000')
             .end((err, res) => {

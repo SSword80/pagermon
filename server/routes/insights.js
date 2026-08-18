@@ -97,7 +97,7 @@ function buildCategoryTrends(currentRows, previousRows, field) {
   }).sort(function (a, b) { return Math.abs(b.percent) - Math.abs(a.percent); });
 }
 
-router.get('/messages', authHelper.isLoggedInMessages, function (req, res) {
+router.get('/messages', authHelper.isLoggedIn, function (req, res) {
   var range = getRange(req);
   if (!range || (range.end - range.start) > (60 * 60)) {
     return res.status(400).json({ error: 'Invalid message range' });
@@ -136,7 +136,7 @@ router.get('/messages', authHelper.isLoggedInMessages, function (req, res) {
     });
 });
 
-router.get('/export', authHelper.isLoggedInMessages, function (req, res) {
+router.get('/export', authHelper.isLoggedIn, function (req, res) {
   var range = getRange(req);
 
   if (!range || (range.end - range.start) > (24 * 60 * 60)) {
@@ -194,7 +194,7 @@ router.get('/export', authHelper.isLoggedInMessages, function (req, res) {
     });
 });
 
-router.get('/', authHelper.isLoggedInMessages, function (req, res) {
+router.get('/', authHelper.isLoggedIn, function (req, res) {
   var range = getRange(req);
   if (!range) return res.status(400).json({ error: 'Invalid date range' });
   var duration = range.end - range.start;
