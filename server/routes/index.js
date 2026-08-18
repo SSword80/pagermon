@@ -38,4 +38,14 @@ router.get('/', function (req, res, next) {
     res.render('index', { pageTitle: 'Home' });
 });
 
+/* GET Insights page. */
+router.get('/insights', function (req, res) {
+    if (!req.isAuthenticated()) {
+        req.flash('loginMessage', 'You need to be logged in to access Insights');
+        return res.redirect('/auth/login');
+    }
+
+    res.render('insights', { pageTitle: 'Insights' });
+});
+
 module.exports = router;

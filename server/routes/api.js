@@ -320,7 +320,7 @@ router.route('/messages')
                   }
 
                   if (insert == true) {
-                    var insertmsg = { address: address, message: message, timestamp: datetime, source: source, alias_id: alias_id }
+                    var insertmsg = { address: address, message: message, timestamp: datetime, source: source, alias_id: alias_id, protocol: data.protocol || null }
                     db('messages').insert(insertmsg).returning('id')
                       .then((result) => {
                         // emit the full message

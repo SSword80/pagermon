@@ -6,19 +6,225 @@
   #insights-body .insight-controls { text-align: right; }
   #insights-body .insight-controls .btn-group { margin-right: 4px; }
   #insights-body .insight-custom-form .form-group { margin-bottom: 0; }
-  #insights-body #insight-chart { min-height: 300px; }
+  #insights-body #insight-chart { min-height: 300px; position: relative; }
+  #insights-body .insight-chart-point { fill: #337ab7; stroke: #fff; stroke-width: 2; cursor: pointer; outline: none; }
+  #insights-body .insight-chart-point:hover,
+  #insights-body .insight-chart-point:focus { r: 7; stroke: #337ab7; }
+  #insights-body .insight-chart-tooltip {
+    position: absolute;
+    display: none;
+    z-index: 10;
+    max-width: 240px;
+    padding: 7px 10px;
+    background: #333;
+    color: #fff;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 1.4;
+    pointer-events: none;
+    box-shadow: 0 2px 6px rgba(0,0,0,.2);
+  }
+  #insights-body .protocol-list { padding: 5px 0 10px; }
+  #insights-body .protocol-item { padding: 12px 15px; border-bottom: 1px solid #eee; }
+  #insights-body .protocol-item:last-child { border-bottom: 0; }
+  #insights-body .protocol-name { font-weight: 600; margin-bottom: 5px; }
+  #insights-body .protocol-meta { float: right; color: #777; font-size: 12px; }
+  #insights-body .protocol-track { height: 16px; background: #f1f1f1; border-radius: 3px; overflow: hidden; }
+  #insights-body .protocol-bar { display: block; height: 100%; min-width: 2px; background: #337ab7; border-radius: 3px; }
+  #insights-body .protocol-count { margin-top: 4px; font-size: 12px; color: #777; }
+  #insights-body .heatmap-wrap { overflow-x: auto; padding: 10px 15px 15px; }
+  #insights-body .heatmap { min-width: 680px; display: grid; grid-template-columns: 70px repeat(24, minmax(20px, 1fr)); gap: 3px; align-items: center; }
+  #insights-body .heatmap-label { font-size: 11px; color: #777; }
+  #insights-body .heatmap-hour { text-align: center; font-size: 10px; color: #777; }
+  #insights-body .heatmap-cell { height: 22px; border-radius: 3px; background: #f1f1f1; position: relative; }
+  #insights-body .heatmap-cell[data-level="1"] { background: #d9edf7; }
+  #insights-body .heatmap-cell[data-level="2"] { background: #9acfea; }
+  #insights-body .heatmap-cell[data-level="3"] { background: #5bc0de; }
+  #insights-body .heatmap-cell[data-level="4"] { background: #337ab7; }
+  #insights-body .heatmap-cell:hover::after { content: attr(aria-label); position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); white-space: nowrap; z-index: 5; background: #333; color: #fff; padding: 4px 7px; border-radius: 3px; font-size: 11px; }
+  #insights-body .heatmap-legend { margin-top: 8px; text-align: right; font-size: 11px; color: #777; }
+  #insights-body .heatmap-swatch { display: inline-block; width: 14px; height: 14px; vertical-align: middle; margin-left: 4px; border-radius: 2px; }
+  #insights-body .heatmap-swatch.level-0 { background: #f1f1f1; }
+  #insights-body .heatmap-swatch.level-1 { background: #d9edf7; }
+  #insights-body .heatmap-swatch.level-2 { background: #9acfea; }
+  #insights-body .heatmap-swatch.level-3 { background: #5bc0de; }
+  #insights-body .heatmap-swatch.level-4 { background: #337ab7; }
+  #insights-body #insight-live-feed {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    gap: 0;
+    padding: 0;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+  #insights-body #insight-live-feed::-webkit-scrollbar {
+    height: 10px;
+  }
+  #insights-body #insight-live-feed::-webkit-scrollbar-track {
+    background: #f5f5f5;
+  }
+  #insights-body #insight-live-feed::-webkit-scrollbar-thumb {
+    background: #aaa;
+    border-radius: 5px;
+  }
+  #insights-body .insight-live-item {
+    flex: 0 0 420px;
+    width: 420px;
+    min-height: 82px;
+    margin: 0;
+    padding: 10px;
+    border: 0;
+    border-right: 1px solid #ccc;
+    border-radius: 0;
+    background: #f5f5f5;
+    text-align: left;
+    color: inherit;
+    cursor: pointer;
+    white-space: normal;
+  }
+  #insights-body .insight-live-item:hover,
+  #insights-body .insight-live-item:focus {
+    background: #e9e9e9;
+    outline: none;
+  }
+  #insights-body .insight-live-item + .insight-live-item {
+    border-left: 0;
+  }
+  #insights-body .insight-live-time {
+    display: inline-block;
+    margin-right: 6px;
+    color: #777;
+    font-size: 12px;
+  }
+  #insights-body .insight-live-agency {
+    font-weight: 600;
+  }
+  #insights-body .insight-live-address {
+    color: #777;
+    margin-left: 6px;
+  }
+  #insights-body .insight-live-message {
+    margin-top: 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  #insights-body #insight-live-feed-new {
+    white-space: nowrap;
+  }
+
+  #insights-body #insight-message-detail-content {
+    max-height: 520px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  #insights-body .insight-hour-message {
+    margin-bottom: 8px;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    background: #fafafa;
+  }
+  #insights-body .insight-hour-message:last-child {
+    margin-bottom: 0;
+  }
+  #insights-body .insight-hour-message-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+  #insights-body .insight-hour-message-time {
+    font-weight: 600;
+  }
+  #insights-body .insight-hour-message-meta {
+    color: #777;
+    font-size: 11px;
+    margin-top: 4px;
+  }
+  #insights-body .insight-hour-message-text {
+    margin-top: 8px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  #insights-body .insight-detail-controls {
+    margin-top: 8px;
+  }
+
+  #insights-body .insight-live-pulse { border-left: 4px solid #777; }
+  #insights-body .insight-live-pulse.active { border-left-color: #3c763d; }
+  #insights-body .insight-live-pulse.quiet { border-left-color: #f0ad4e; }
+  #insights-body .insight-live-pulse.inactive { border-left-color: #999; }
+  #insights-body .insight-live-pulse-label { font-size: 16px; font-weight: 600; }
+  #insights-body .insight-live-pulse-count { font-size: 30px; font-weight: 600; margin: 4px 0; }
+  #insights-body .insight-status-row { display: flex; }
+  #insights-body .insight-status-row > [class*="col-"] { display: flex; }
+  #insights-body .insight-status-row .panel { width: 100%; margin-bottom: 20px; }
+  #insights-body .insight-status-row .panel-body { min-height: 150px; display: flex; flex-direction: column; justify-content: center; }
+  #insights-body .insight-anomaly { border-left: 4px solid #999; }
+  #insights-body .insight-anomaly.normal { border-left-color: #3c763d; }
+  #insights-body .insight-anomaly.spike { border-left-color: #a94442; }
+  #insights-body .insight-anomaly.drop { border-left-color: #f0ad4e; }
+  #insights-body .insight-anomaly-label { font-size: 16px; font-weight: 600; }
+  #insights-body .insight-anomaly-message { font-size: 20px; font-weight: 600; margin: 5px 0; }
+  #insights-body .insight-table-track { height: 5px; margin-top: 5px; background: #eee; border-radius: 3px; overflow: hidden; }
+  #insights-body .insight-table-bar { display: block; height: 100%; background: #777; border-radius: 3px; min-width: 0; }
+  #insights-body .insight-table-percent { font-size: 11px; color: #777; margin-top: 2px; }
+  #insights-body .insight-trend-value { font-size: 14px; font-weight: 600; white-space: nowrap; }
+  #insights-body .insight-trend-value.up { color: #3c763d; }
+  #insights-body .insight-trend-value.down { color: #a94442; }
+  #insights-body .insight-trend-value.flat { color: #777; }
+  #insights-body .insight-trend-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; }
+  #insights-body .insight-trend-row strong { font-size: 15px; }
+  #insights-body .insight-trend-row:last-child { border-bottom: 0; }
+  #insights-body .insight-trend-hero { padding: 8px 0 4px; }
+  #insights-body .insight-trend-hero #insight-trend-period { margin-top: 5px; margin-bottom: 5px; font-size: 30px; }
+  #insights-body .insight-trend-section-title { font-size: 15px; font-weight: 600; }
+  #insights-body .peak-time { font-size: 22px; font-weight: 600; }
+  #insights-body .peak-value { font-size: 28px; font-weight: 600; }
+  #insights-body .peak-meta { color: #777; font-size: 12px; }
   @media (max-width: 767px) {
     #insights-body .insight-toolbar { margin-top: 10px; }
     #insights-body .insight-title { float: none !important; }
     #insights-body .insight-controls { float: none !important; text-align: left; margin-top: 15px; }
-    #insights-body .insight-controls .btn-group { display: inline-flex; margin-bottom: 5px; }
-    #insights-body .insight-controls .btn { padding-left: 10px; padding-right: 10px; }
+    #insights-body .insight-controls .btn-group {
+      display: flex;
+      width: 100%;
+      margin: 0 0 8px 0;
+    }
+    #insights-body .insight-controls .btn-group .btn {
+      flex: 1 1 auto;
+    }
+    #insights-body .insight-controls > #insight-refresh,
+    #insights-body .insight-controls > #insight-custom-toggle {
+      display: block;
+      width: 100%;
+      margin: 0 0 8px 0;
+    }
+    #insights-body .insight-controls .btn {
+      padding-left: 10px;
+      padding-right: 10px;
+    }
     #insights-body .insight-custom-form .form-group { display: block; margin: 0 0 10px 0 !important; }
     #insights-body .insight-custom-form .form-control { width: 100%; }
     #insights-body .insight-custom-form .btn { margin-left: 0 !important; width: 100%; }
     #insights-body #insight-chart { min-height: 240px; }
     #insights-body #insight-chart svg { min-width: 0 !important; }
+    #insights-body .insight-live-item {
+      flex-basis: 340px;
+      width: 340px;
+    }
     #insights-body .table-responsive { border: 0; margin-bottom: 0; }
+  }
+
+  @media (max-width: 480px) {
+    #insights-body .insight-live-item {
+      flex-basis: 280px;
+      width: 280px;
+    }
   }
 </style>
 </head>
@@ -32,6 +238,9 @@
         <div class="pull-left insight-title">
           <h2><i class="fa fa-line-chart"></i> PagerMon Insights</h2>
           <p class="text-muted">Message activity for the selected period.</p>
+          <div id="insight-data-status" class="text-muted" style="font-size:12px;">
+            <i class="fa fa-clock-o"></i> Waiting for data…
+          </div>
         </div>
         <div class="pull-right insight-controls">
           <div class="btn-group" role="group" aria-label="Insights date range">
@@ -39,6 +248,13 @@
             <button type="button" class="btn btn-default insight-range" data-days="7">7 days</button>
             <button type="button" class="btn btn-default insight-range" data-days="30">30 days</button>
           </div>
+          <button type="button" class="btn btn-default" id="insight-refresh">
+            <i class="fa fa-refresh"></i> Refresh Data
+          </button>
+          <button type="button" class="btn btn-default" id="insight-export">
+            <i class="fa fa-download"></i> Export CSV
+          </button>
+          <span id="insight-export-range" class="text-muted" style="display:inline-block; margin-left:6px; font-size:11px; vertical-align:middle;"></span>
           <button type="button" class="btn btn-default" id="insight-custom-toggle">Custom</button>
         </div>
       </div>
@@ -57,7 +273,79 @@
     <div class="col-sm-6 col-md-3"><div class="panel panel-default"><div class="panel-body text-center"><div class="text-muted">Messages</div><div id="insight-messages" class="h2">—</div></div></div></div>
     <div class="col-sm-6 col-md-3"><div class="panel panel-default"><div class="panel-body text-center"><div class="text-muted">Unique addresses</div><div id="insight-addresses" class="h2">—</div></div></div></div>
     <div class="col-sm-6 col-md-3"><div class="panel panel-default"><div class="panel-body text-center"><div class="text-muted">Unique capcodes</div><div id="insight-capcodes" class="h2">—</div></div></div></div>
-    <div class="col-sm-6 col-md-3"><div class="panel panel-default"><div class="panel-body text-center"><div class="text-muted">Top source</div><div id="insight-source" class="h2">—</div></div></div></div>
+    <div class="col-sm-6 col-md-3"><div class="panel panel-default"><div class="panel-body text-center"><div class="text-muted">Top agency</div><div id="insight-source" class="h2">—</div></div></div></div>
+  </div>
+
+  <div class="row insight-status-row">
+    <div class="col-sm-6">
+      <div class="panel panel-default insight-live-pulse">
+        <div class="panel-body text-center">
+          <div id="insight-live-pulse-label" class="insight-live-pulse-label">⚪ Live Pulse</div>
+          <div id="insight-live-pulse-count" class="insight-live-pulse-count">—</div>
+          <div class="text-muted">messages in the last hour</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-sm-6">
+      <div class="panel panel-default insight-anomaly">
+        <div class="panel-body text-center">
+          <div id="insight-anomaly-label" class="insight-anomaly-label">⚪ Traffic Anomaly</div>
+          <div id="insight-anomaly-message" class="insight-anomaly-message">Checking traffic patterns…</div>
+          <div id="insight-anomaly-detail" class="text-muted"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-xs-12">
+      <div class="panel panel-default" id="insight-trend-panel">
+        <div class="panel-heading"><strong>📈 Traffic Trend</strong></div>
+        <div class="panel-body" aria-live="polite">
+          <div class="text-center insight-trend-hero">
+            <div id="insight-trend-period" class="h2">—</div>
+            <div class="text-muted">Overall traffic compared with the previous period</div>
+          </div>
+          <hr>
+          <div class="row">
+            <div class="col-sm-6">
+              <div class="insight-trend-section-title">🏢 Agency trends</div>
+              <div id="insight-trend-agencies" style="margin-top:10px;">—</div>
+            </div>
+            <div class="col-sm-6">
+              <div class="insight-trend-section-title">📡 Protocol trends</div>
+              <div id="insight-trend-protocols" style="margin-top:10px;">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-xs-12">
+      <div class="panel panel-default">
+        <div class="panel-heading"><strong>🔥 Peak Activity</strong></div>
+        <div class="panel-body" aria-live="polite">
+          <div class="row text-center">
+            <div class="col-sm-4">
+              <div class="text-muted">Busiest period</div>
+              <div id="insight-peak-time" class="peak-time">—</div>
+            </div>
+            <div class="col-sm-4">
+              <div class="text-muted">Peak messages</div>
+              <div id="insight-peak-count" class="peak-value">—</div>
+            </div>
+            <div class="col-sm-4">
+              <div class="text-muted">Average / hour</div>
+              <div id="insight-average-hour" class="peak-value">—</div>
+            </div>
+          </div>
+          <div class="text-center peak-meta" style="margin-top:8px;">Based on the selected Insights date range.</div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="row">
@@ -68,11 +356,79 @@
       </div>
     </div>
   </div>
+  <div class="row">
+    <div class="col-xs-12">
+      <div class="panel panel-default insight-live-feed">
+        <div class="panel-heading">
+          <strong>⚡ Live Activity</strong>
+          <button type="button" class="btn btn-xs btn-default pull-right" id="insight-live-feed-clear" style="margin-left:8px;">Clear Messages</button>
+          <button type="button" class="btn btn-xs btn-primary pull-right" id="insight-live-feed-new" style="display:none; margin-left:8px;">
+            <i class="fa fa-arrow-left"></i> <span id="insight-live-feed-new-count">New messages</span>
+          </button>
+          <span id="insight-live-feed-status" class="pull-right text-muted">Connecting…</span>
+        </div>
+        <div class="panel-body" style="padding:0;">
+          <div id="insight-live-feed" aria-live="polite" aria-label="Live message activity">
+            <div class="text-muted text-center" style="padding:20px;">Waiting for live messages…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row" id="insight-message-detail" style="display:none;">
+    <div class="col-xs-12">
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <strong>🔎 Messages in selected period</strong>
+          <button type="button" class="btn btn-xs btn-default pull-right" id="insight-message-detail-close">Close</button>
+        </div>
+        <div class="panel-body">
+          <div id="insight-message-detail-summary" class="text-muted" aria-live="polite"></div>
+          <div class="insight-detail-controls">
+            <div class="btn-group btn-group-xs" role="group" aria-label="Message order">
+              <button type="button" class="btn btn-default active" id="insight-detail-newest">Newest</button>
+              <button type="button" class="btn btn-default" id="insight-detail-oldest">Oldest</button>
+            </div>
+          </div>
+          <div id="insight-message-detail-content" style="margin-top:10px;" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-xs-12">
+      <div class="panel panel-default">
+        <div class="panel-heading"><strong>Activity by day and hour</strong></div>
+        <div class="heatmap-wrap">
+          <div id="insight-heatmap" class="heatmap" role="img" aria-label="Message activity by day and hour"></div>
+          <div class="heatmap-legend">Less <span class="heatmap-swatch level-0"></span><span class="heatmap-swatch level-1"></span><span class="heatmap-swatch level-2"></span><span class="heatmap-swatch level-3"></span><span class="heatmap-swatch level-4"></span> More</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-xs-12">
+      <div class="panel panel-default">
+        <div class="panel-heading"><strong>Messages by protocol</strong></div>
+        <div id="insight-protocol-list" class="protocol-list" aria-live="polite"></div>
+      </div>
+    </div>
+  </div>
 
   <div class="row">
     <div class="col-xs-12 col-md-4"><div class="panel panel-default"><div class="panel-heading"><strong>Top addresses</strong></div><div class="table-responsive"><table class="table table-striped table-condensed"><thead><tr><th>Address</th><th class="text-right">Messages</th></tr></thead><tbody id="insight-address-table"></tbody></table></div></div></div>
     <div class="col-xs-12 col-md-4"><div class="panel panel-default"><div class="panel-heading"><strong>Top capcodes</strong></div><div class="table-responsive"><table class="table table-striped table-condensed"><thead><tr><th>Capcode</th><th class="text-right">Messages</th></tr></thead><tbody id="insight-capcode-table"></tbody></table></div></div></div>
-    <div class="col-xs-12 col-md-4"><div class="panel panel-default"><div class="panel-heading"><strong>Top sources</strong></div><div class="table-responsive"><table class="table table-striped table-condensed"><thead><tr><th>Source</th><th class="text-right">Messages</th></tr></thead><tbody id="insight-source-table"></tbody></table></div></div></div>
+    <div class="col-xs-12 col-md-4">
+      <div class="panel panel-default">
+        <div class="panel-heading"><strong>Top agencies</strong></div>
+        <div class="panel-body">
+          <div id="insight-agency-list" class="protocol-list" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div id="insight-error" class="alert alert-danger" style="display:none;"></div>
@@ -88,10 +444,67 @@ function insightRange() {
   return { start: end - (insightDays * 24 * 60 * 60), end: end };
 }
 
+function updateInsightExportRangeLabel() {
+  var label = document.getElementById('insight-export-range');
+  if (!label) return;
+
+  var range = insightRange();
+  var start = new Date(Number(range.start) * 1000);
+  var end = new Date(Number(range.end) * 1000);
+
+  var format = function (date) {
+    return date.toLocaleString([], {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  label.textContent = format(start) + ' → ' + format(end);
+}
+
 function toDateTimeLocal(timestamp) {
   var date = new Date(timestamp * 1000);
   var pad = function (value) { return String(value).padStart(2, '0'); };
   return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) + 'T' + pad(date.getHours()) + ':' + pad(date.getMinutes());
+}
+
+function renderTrendValue(trend) {
+  var percent = Number(trend.percent || 0);
+  var direction = trend.direction === 'up' ? 'up' : (trend.direction === 'down' ? 'down' : 'flat');
+  var arrow = direction === 'up' ? '↑' : (direction === 'down' ? '↓' : '→');
+  var sign = percent > 0 ? '+' : '';
+  var label = direction === 'up' ? 'Increase' : (direction === 'down' ? 'Decrease' : 'No change');
+  return '<span class="insight-trend-value ' + direction + '" title="' + label + '">' +
+    arrow + ' ' + sign + percent + '%</span>';
+}
+
+function renderTrendList(items, field) {
+  if (!items || !items.length) {
+    return '<span class="text-muted">No trend data</span>';
+  }
+
+  return items.slice(0, 5).map(function (item) {
+    var name = $('<div>').text(item[field] || 'UNKNOWN').html();
+    return '<div class="insight-trend-row">' +
+      '<strong>' + name + '</strong>' +
+      renderTrendValue(item) +
+      '</div>';
+  }).join('');
+}
+
+function renderTrends(trends) {
+  if (!trends || !trends.period) {
+    $('#insight-trend-period').text('No trend data');
+    $('#insight-trend-agencies').html('<span class="text-muted">No trend data</span>');
+    $('#insight-trend-protocols').html('<span class="text-muted">No trend data</span>');
+    return;
+  }
+
+  $('#insight-trend-period').html(renderTrendValue(trends.period));
+  $('#insight-trend-agencies').html(renderTrendList(trends.agencies, 'agency'));
+  $('#insight-trend-protocols').html(renderTrendList(trends.protocols, 'protocol'));
 }
 
 function renderInsightChart(activity) {
@@ -102,44 +515,836 @@ function renderInsightChart(activity) {
   if (max < 1) max = 1;
   function x(index) { return padding.left + (activity.length === 1 ? plotWidth / 2 : (index / (activity.length - 1)) * plotWidth); }
   function y(value) { return padding.top + plotHeight - ((Number(value) || 0) / max) * plotHeight; }
-  var points = activity.map(function (point, index) { return x(index) + ',' + y(point.count); }).join(' '), labels = '', labelCount = Math.min(6, activity.length);
+  var points = activity.map(function (point, index) { return x(index) + ',' + y(point.count); }).join(' '), labels = '', pointMarkup = '', labelCount = Math.min(6, activity.length);
   for (var i = 0; i < labelCount; i++) { var index = labelCount === 1 ? 0 : Math.round(i * (activity.length - 1) / (labelCount - 1)); var date = new Date(Number(activity[index].timestamp) * 1000); var label = date.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }); labels += '<text x="' + x(index) + '" y="' + (height - 12) + '" text-anchor="middle" font-size="11" fill="#777">' + label + '</text>'; }
+  activity.forEach(function (point, index) {
+    var date = new Date(Number(point.timestamp) * 1000);
+    var count = Number(point.count) || 0;
+    var label = date.toLocaleString([], {
+      weekday: 'long',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }) + ' — ' + count.toLocaleString() + ' messages';
+
+    pointMarkup += '<circle cx="' + x(index) +
+      '" cy="' + y(count) +
+      '" r="5" class="insight-chart-point" tabindex="0" role="button" aria-label="' +
+      $('<div>').text(label).html() +
+      '" data-label="' + $('<div>').text(label).html() +
+      '" data-insight-timestamp="' + $('<div>').text(point.timestamp || '').html() +
+      '"></circle>';
+  });
+
   var yLines = '';
   for (var tick = 0; tick <= 4; tick++) { var value = Math.round(max * tick / 4), lineY = y(value); yLines += '<line x1="' + padding.left + '" y1="' + lineY + '" x2="' + (width - padding.right) + '" y2="' + lineY + '" stroke="#ddd" />'; yLines += '<text x="' + (padding.left - 8) + '" y="' + (lineY + 4) + '" text-anchor="end" font-size="11" fill="#777">' + value + '</text>'; }
-  container.innerHTML = '<svg width="100%" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="Messages over time">' + yLines + '<line x1="' + padding.left + '" y1="' + (padding.top + plotHeight) + '" x2="' + (width - padding.right) + '" y2="' + (padding.top + plotHeight) + '" stroke="#999" /><polyline points="' + points + '" fill="none" stroke="#337ab7" stroke-width="3" />' + labels + '</svg>';
+  container.innerHTML = '<svg width="100%" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="Messages over time">' + yLines + '<line x1="' + padding.left + '" y1="' + (padding.top + plotHeight) + '" x2="' + (width - padding.right) + '" y2="' + (padding.top + plotHeight) + '" stroke="#999" /><polyline points="' + points + '" fill="none" stroke="#337ab7" stroke-width="3" />' + pointMarkup + labels + '</svg>';
+
+  var tooltip = document.createElement('div');
+  tooltip.className = 'insight-chart-tooltip';
+  tooltip.setAttribute('role', 'status');
+  container.appendChild(tooltip);
+
+  function hideTooltip() {
+    tooltip.style.display = 'none';
+  }
+
+  function showTooltip(point) {
+    tooltip.textContent = point.getAttribute('data-label') || '';
+    tooltip.style.display = 'block';
+
+    var pointRect = point.getBoundingClientRect();
+    var containerRect = container.getBoundingClientRect();
+    var left = pointRect.left - containerRect.left + (pointRect.width / 2);
+    var top = pointRect.top - containerRect.top - tooltip.offsetHeight - 8;
+
+    left = Math.max(5, Math.min(left - (tooltip.offsetWidth / 2), containerRect.width - tooltip.offsetWidth - 5));
+    if (top < 5) top = pointRect.bottom - containerRect.top + 8;
+
+    tooltip.style.left = left + 'px';
+    tooltip.style.top = top + 'px';
+  }
+
+  var chartPoints = container.querySelectorAll('.insight-chart-point');
+  chartPoints.forEach(function (point) {
+    point.addEventListener('mouseenter', function () {
+      showTooltip(point);
+    });
+
+    point.addEventListener('mouseleave', hideTooltip);
+
+    point.addEventListener('focus', function () {
+      showTooltip(point);
+    });
+
+    point.addEventListener('blur', hideTooltip);
+
+    point.addEventListener('click', function () {
+      showTooltip(point);
+      showInsightHourMessages(point.getAttribute('data-insight-timestamp'));
+    });
+  });
 }
 
-function renderInsightTable(selector, rows, label) {
+var insightDetailMessages = [];
+var insightDetailOrder = 'newest';
+
+function renderInsightDetailMessages() {
+  var content = document.getElementById('insight-message-detail-content');
+  if (!content) return;
+
+  var messages = insightDetailMessages.slice();
+
+  messages.sort(function (a, b) {
+    return insightDetailOrder === 'oldest'
+      ? Number(a.timestamp || 0) - Number(b.timestamp || 0)
+      : Number(b.timestamp || 0) - Number(a.timestamp || 0);
+  });
+
+  content.innerHTML = messages.map(function (message) {
+    var time = Number(message.timestamp)
+      ? new Date(Number(message.timestamp) * 1000).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        })
+      : 'Unknown';
+
+    var agency = message.agency || 'UNKNOWN';
+    var address = message.address || '—';
+    var source = message.source || '';
+    var protocol = message.protocol || '';
+
+    return '<div class="insight-hour-message">' +
+      '<div class="insight-hour-message-header">' +
+        '<span class="insight-hour-message-time">' +
+          escapeInsightHtml(time) +
+        '</span>' +
+        '<span class="text-muted">' +
+          escapeInsightHtml(agency) +
+        '</span>' +
+      '</div>' +
+      '<div class="insight-hour-message-meta">' +
+        escapeInsightHtml(address) +
+        (source ? ' · ' + escapeInsightHtml(source) : '') +
+        (protocol ? ' · ' + escapeInsightHtml(protocol) : '') +
+      '</div>' +
+      '<div class="insight-hour-message-text">' +
+        escapeInsightHtml(message.message || 'No message text') +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function showInsightHourMessages(timestamp) {
+  var panel = document.getElementById('insight-message-detail');
+  var summary = document.getElementById('insight-message-detail-summary');
+  var content = document.getElementById('insight-message-detail-content');
+
+  if (!panel || !summary || !content || !timestamp) return;
+
+  var start = Math.floor(Number(timestamp) / 3600) * 3600;
+  var end = start + 3599;
+
+  content.innerHTML = '<div class="text-muted">Loading messages…</div>';
+  panel.style.display = '';
+
+  $.getJSON('/api/insights/messages?start=' + start + '&end=' + end)
+    .done(function (data) {
+      var messages = data.messages || [];
+      var date = new Date(start * 1000);
+      var period = date.toLocaleString([], {
+        weekday: 'short',
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit'
+      });
+
+      summary.innerHTML =
+        '<strong>' + escapeInsightHtml(period) + '</strong> · ' +
+        escapeInsightHtml(String(data.count || messages.length)) +
+        ' messages' +
+        (data.truncated ? ' · showing latest 50' : '');
+
+      if (!messages.length) {
+        content.innerHTML =
+          '<div class="text-muted">No messages were recorded during this hour.</div>';
+        return;
+      }
+
+      insightDetailMessages = messages;
+      renderInsightDetailMessages();
+
+      panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    })
+    .fail(function () {
+      summary.innerHTML = '<strong>Unable to load messages</strong>';
+      content.innerHTML =
+        '<div class="alert alert-danger">Unable to load messages for this hour.</div>';
+    });
+}
+
+function escapeInsightHtml(value) {
+  return $('<div>').text(value == null ? '' : String(value)).html();
+}
+
+function renderLiveMessage(message, isNew) {
+  var timestamp = Number(message.timestamp);
+  var date = timestamp ? new Date(timestamp * 1000) : new Date();
+  var time = date.toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+
+  var agency = message.agency || 'UNKNOWN';
+  var alias = message.alias || '';
+  var address = message.address || '—';
+  var source = message.source || '';
+  var protocol = message.protocol || '';
+  var title = agency;
+
+  if (alias) title += ' — ' + alias;
+
+  var html = '<button type="button" class="insight-live-item' +
+    (isNew ? ' new' : '') +
+    '" data-insight-message-id="' + escapeInsightHtml(message.id || '') +
+    '" data-insight-timestamp="' + escapeInsightHtml(message.timestamp || '') + '">' +
+    '<div>' +
+      '<span class="insight-live-time">' + escapeInsightHtml(time) + '</span>' +
+      '<span class="insight-live-agency">' + escapeInsightHtml(title) + '</span>' +
+      '<span class="insight-live-address">' + escapeInsightHtml(address) + '</span>' +
+    '</div>' +
+    '<div class="insight-live-message" title="' + escapeInsightHtml(message.message || '') + '">' +
+      escapeInsightHtml(message.message || 'No message text') +
+    '</div>' +
+    (source ? '<div class="text-muted" style="font-size:11px;">' + escapeInsightHtml(source) + '</div>' : '') +
+    (protocol ? '<div class="text-muted" style="font-size:11px;">' + escapeInsightHtml(protocol) + '</div>' : '') +
+  '</button>';
+
+  return html;
+}
+
+function showLiveInsightMessage(message) {
+  var panel = document.getElementById('insight-message-detail');
+  var summary = document.getElementById('insight-message-detail-summary');
+  var content = document.getElementById('insight-message-detail-content');
+
+  if (!panel || !summary || !content) return;
+
+  var timestamp = Number(message.timestamp);
+  var date = timestamp ? new Date(timestamp * 1000) : null;
+
+  var time = date ? date.toLocaleString([], {
+    weekday: 'short',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  }) : 'Unknown';
+
+  var agency = message.agency || 'UNKNOWN';
+  var alias = message.alias || '—';
+  var address = message.address || '—';
+  var source = message.source || '—';
+  var protocol = message.protocol || '—';
+
+  summary.innerHTML =
+    '<strong>' + escapeInsightHtml(agency) + '</strong> · ' +
+    escapeInsightHtml(address);
+
+  content.innerHTML =
+    '<div class="row">' +
+      '<div class="col-sm-6"><strong>Address</strong><br>' + escapeInsightHtml(address) + '</div>' +
+      '<div class="col-sm-6"><strong>Agency</strong><br>' + escapeInsightHtml(agency) + '</div>' +
+    '</div>' +
+    '<div class="row" style="margin-top:12px;">' +
+      '<div class="col-sm-6"><strong>Alias</strong><br>' + escapeInsightHtml(alias) + '</div>' +
+      '<div class="col-sm-6"><strong>Protocol</strong><br>' + escapeInsightHtml(protocol) + '</div>' +
+    '</div>' +
+    '<div class="row" style="margin-top:12px;">' +
+      '<div class="col-sm-6"><strong>Source</strong><br>' + escapeInsightHtml(source) + '</div>' +
+      '<div class="col-sm-6"><strong>Time</strong><br>' + escapeInsightHtml(time) + '</div>' +
+    '</div>' +
+    '<div style="margin-top:16px;">' +
+      '<strong>Message</strong>' +
+      '<div class="well" style="margin-top:8px; margin-bottom:0; white-space:pre-wrap;">' +
+        escapeInsightHtml(message.message || 'No message text') +
+      '</div>' +
+    '</div>';
+
+  panel.style.display = '';
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+var INSIGHT_LIVE_STORAGE_KEY = 'pagermon.insights.liveMessages';
+var INSIGHT_LIVE_MAX_MESSAGES = 30;
+
+function getLiveInsightMessageKey(message) {
+  if (message && message.id != null) {
+    return 'id:' + String(message.id);
+  }
+
+  return 'msg:' +
+    String(message && message.timestamp || '') + ':' +
+    String(message && message.address || '') + ':' +
+    String(message && message.message || '');
+}
+
+function saveLiveInsightMessages(messages) {
+  try {
+    localStorage.setItem(
+      INSIGHT_LIVE_STORAGE_KEY,
+      JSON.stringify(messages.slice(0, INSIGHT_LIVE_MAX_MESSAGES))
+    );
+  } catch (error) {
+    console.log('Unable to save live Insights messages.', error);
+  }
+}
+
+function getSavedLiveInsightMessages() {
+  try {
+    var saved = localStorage.getItem(INSIGHT_LIVE_STORAGE_KEY);
+    if (!saved) return [];
+
+    var messages = JSON.parse(saved);
+
+    if (!Array.isArray(messages)) return [];
+
+    return messages.slice(0, INSIGHT_LIVE_MAX_MESSAGES);
+  } catch (error) {
+    console.log('Unable to restore live Insights messages.', error);
+    return [];
+  }
+}
+
+function restoreLiveInsightMessages() {
+  var container = document.getElementById('insight-live-feed');
+  if (!container) return;
+
+  var messages = getSavedLiveInsightMessages();
+
+  if (!messages.length) return;
+
+  container.innerHTML = messages.map(function (message) {
+    return renderLiveMessage(message, false);
+  }).join('');
+
+  container.scrollLeft = 0;
+}
+
+function clearLiveInsightMessages() {
+  var container = document.getElementById('insight-live-feed');
+
+  try {
+    localStorage.removeItem(INSIGHT_LIVE_STORAGE_KEY);
+  } catch (error) {
+    console.log('Unable to clear saved live Insights messages.', error);
+  }
+
+  if (container) {
+    container.innerHTML =
+      '<div class="text-muted text-center" style="padding:20px; min-width:100%;">Waiting for live messages…</div>';
+  }
+}
+
+var insightNewLiveMessages = 0;
+
+function isLiveFeedAtNewest() {
+  var container = document.getElementById('insight-live-feed');
+  if (!container) return true;
+
+  return container.scrollLeft <= 5;
+}
+
+function updateNewLiveMessageIndicator() {
+  var button = document.getElementById('insight-live-feed-new');
+  var count = document.getElementById('insight-live-feed-new-count');
+
+  if (!button || !count) return;
+
+  if (insightNewLiveMessages > 0) {
+    count.textContent = insightNewLiveMessages === 1
+      ? '1 New message'
+      : insightNewLiveMessages + ' New messages';
+
+    button.style.display = '';
+  } else {
+    button.style.display = 'none';
+  }
+}
+
+function clearNewLiveMessageIndicator() {
+  insightNewLiveMessages = 0;
+  updateNewLiveMessageIndicator();
+}
+
+function showNewestLiveMessages() {
+  var container = document.getElementById('insight-live-feed');
+  if (!container) return;
+
+  container.scrollTo({
+    left: 0,
+    behavior: 'smooth'
+  });
+
+  clearNewLiveMessageIndicator();
+}
+
+function addLiveInsightMessage(message) {
+  var container = document.getElementById('insight-live-feed');
+  if (!container) return;
+
+  var messages = getSavedLiveInsightMessages();
+  var newKey = getLiveInsightMessageKey(message);
+
+  messages = messages.filter(function (item) {
+    return getLiveInsightMessageKey(item) !== newKey;
+  });
+
+  messages.unshift(message);
+  messages = messages.slice(0, INSIGHT_LIVE_MAX_MESSAGES);
+
+  saveLiveInsightMessages(messages);
+
+  var waiting = container.querySelector('.text-muted.text-center');
+  if (waiting) container.innerHTML = '';
+
+  var wasAtNewest = isLiveFeedAtNewest();
+
+  container.insertAdjacentHTML('afterbegin', renderLiveMessage(message, true));
+
+  var items = container.querySelectorAll('.insight-live-item');
+  for (var i = INSIGHT_LIVE_MAX_MESSAGES; i < items.length; i++) {
+    items[i].remove();
+  }
+
+  if (wasAtNewest) {
+    container.scrollLeft = 0;
+    clearNewLiveMessageIndicator();
+  } else {
+    insightNewLiveMessages++;
+    updateNewLiveMessageIndicator();
+  }
+
+  window.setTimeout(function () {
+    var first = container.querySelector('.insight-live-item');
+    if (first) first.classList.remove('new');
+  }, 1200);
+}
+
+
+function bindLiveInsightClicks() {
+  var container = document.getElementById('insight-live-feed');
+  if (!container || container.dataset.clickBound === 'true') return;
+
+  container.dataset.clickBound = 'true';
+
+  container.addEventListener('click', function (event) {
+    var item = event.target.closest('.insight-live-item');
+    if (!item) return;
+
+    var timestamp = Number(item.getAttribute('data-insight-timestamp'));
+
+    if (!timestamp) return;
+
+    var start = timestamp - 2;
+    var end = timestamp + 2;
+
+    $.getJSON('/api/insights/messages?start=' + start + '&end=' + end)
+      .done(function (data) {
+        if (data.messages && data.messages.length) {
+          var message = data.messages[0];
+
+          for (var i = 0; i < data.messages.length; i++) {
+            if (Number(data.messages[i].id) === Number(item.getAttribute('data-insight-message-id'))) {
+              message = data.messages[i];
+              break;
+            }
+          }
+
+          showLiveInsightMessage(message);
+        }
+      })
+      .fail(function () {
+        console.log('Unable to load live message details.');
+      });
+  });
+}
+
+
+function renderActivityHeatmap(activity) {
+  var container = document.getElementById('insight-heatmap');
+  var days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  var cells = [];
+  var max = 0;
+  var totals = {};
+  (activity || []).forEach(function (point) {
+    var date = new Date(Number(point.timestamp) * 1000);
+    var key = date.getDay() + '-' + date.getHours();
+    totals[key] = (totals[key] || 0) + (Number(point.count) || 0);
+    max = Math.max(max, totals[key]);
+  });
+  var header = '<div class="heatmap-label"></div>';
+  for (var hour = 0; hour < 24; hour++) header += '<div class="heatmap-hour">' + String(hour).padStart(2, '0') + '</div>';
+  cells.push(header);
+  for (var day = 0; day < 7; day++) {
+    var row = '<div class="heatmap-label">' + days[day] + '</div>';
+    for (var h = 0; h < 24; h++) {
+      var count = totals[day + '-' + h] || 0;
+      var level = max ? Math.min(4, Math.ceil((count / max) * 4)) : 0;
+      var label = days[day] + ' ' + String(h).padStart(2, '0') + ':00 — ' + count.toLocaleString() + ' messages';
+      row += '<div class="heatmap-cell" data-level="' + level + '" aria-label="' + label + '" title="' + label + '"></div>';
+    }
+    cells.push(row);
+  }
+  if (!activity || !activity.length) {
+    container.innerHTML = '<div class="text-muted" style="grid-column:1 / -1;">No message activity for this period.</div>';
+    return;
+  }
+  container.innerHTML = cells.join('');
+}
+
+function renderInsightTable(selector, rows, label, total) {
   var html = '';
-  (rows || []).forEach(function (row) { var value = label(row); html += '<tr><td>' + $('<div>').text(value).html() + '</td><td class="text-right">' + Number(row.count || 0).toLocaleString() + '</td></tr>'; });
+  (rows || []).forEach(function (row) {
+    var value = label(row);
+    var count = Number(row.count || 0);
+    var percent = total ? (count / total) * 100 : 0;
+    var width = Math.max(percent, count ? 1 : 0);
+
+    html += '<tr><td>' +
+      $('<div>').text(value).html() +
+      '<div class="insight-table-track"><span class="insight-table-bar" style="width:' +
+      width + '%;"></span></div>' +
+      '<div class="insight-table-percent">' +
+      percent.toFixed(1) + '%</div>' +
+      '</td><td class="text-right">' +
+      count.toLocaleString() +
+      '</td></tr>';
+  });
+
   if (!html) html = '<tr><td colspan="2" class="text-muted">No data</td></tr>';
   $(selector).html(html);
 }
 
+function renderAgencyList(rows, total) {
+  var html = '';
+  (rows || []).forEach(function (row) {
+    var count = Number(row.count || 0);
+    var percent = total ? (count / total) * 100 : 0;
+    var agency = row.agency || 'UNKNOWN';
+    var width = Math.max(percent, count ? 1 : 0);
+    html += '<div class="protocol-item"><div class="protocol-name">' +
+      $('<div>').text(agency).html() +
+      '<span class="protocol-meta">' + percent.toFixed(1) + '%</span></div>' +
+      '<div class="protocol-track"><span class="protocol-bar" style="width:' +
+      width + '%;"></span></div>' +
+      '<div class="protocol-count">' + count.toLocaleString() +
+      ' messages</div></div>';
+  });
+  if (!html) html = '<div class="protocol-item text-muted">No agency data</div>';
+  $('#insight-agency-list').html(html);
+}
+
+function renderProtocolTable(rows, total) {
+  var html = '';
+  (rows || []).forEach(function (row) {
+    var count = Number(row.count || 0);
+    var percent = total ? (count / total) * 100 : 0;
+    var protocol = row.protocol || 'UNKNOWN';
+    var width = Math.max(percent, count ? 1 : 0);
+    html += '<div class="protocol-item"><div class="protocol-name">' + $('<div>').text(protocol).html() + '<span class="protocol-meta">' + percent.toFixed(1) + '%</span></div><div class="protocol-track"><span class="protocol-bar" style="width:' + width + '%;"></span></div><div class="protocol-count">' + count.toLocaleString() + ' messages</div></div>';
+  });
+  if (!html) html = '<div class="protocol-item text-muted">No protocol data</div>';
+  $('#insight-protocol-list').html(html);
+}
+
+function renderPeakActivity(peak) {
+  if (!peak || !peak.timestamp) {
+    $('#insight-peak-time').text('No activity');
+    $('#insight-peak-count').text('0');
+    $('#insight-average-hour').text('0');
+    return;
+  }
+
+  var start = new Date(Number(peak.timestamp) * 1000);
+  var end = new Date((Number(peak.timestamp) + 3600) * 1000);
+  var day = start.toLocaleDateString([], { weekday: 'long' });
+  var startTime = start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  var endTime = end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  $('#insight-peak-time').text(day + ' ' + startTime + '–' + endTime);
+  $('#insight-peak-count').text(Number(peak.count || 0).toLocaleString());
+  $('#insight-average-hour').text(Number(peak.averagePerHour || 0).toLocaleString());
+}
+
+function renderLivePulse(pulse) {
+  var count = Number(pulse && pulse.count || 0);
+  var status = count > 0 ? 'active' : 'inactive';
+  var label = count > 0 ? '🟢 Live Pulse' : '⚪ Live Pulse';
+
+  if (count > 0 && count < 10) {
+    status = 'quiet';
+    label = '🟡 Live Pulse';
+  }
+
+  $('#insight-live-pulse-count').text(count.toLocaleString());
+  $('#insight-live-pulse-label').text(label);
+  $('.insight-live-pulse').removeClass('active quiet inactive').addClass(status);
+}
+
+function renderAnomaly(anomaly) {
+  var data = anomaly || {};
+  var status = data.status || 'normal';
+  var current = Number(data.current || 0);
+  var baseline = Number(data.baseline || 0);
+  var percent = Number(data.percent || 0);
+
+  var label = '🟢 Traffic Anomaly';
+  var message = 'Traffic is within normal range';
+  var detail = '';
+
+  if (!data.sufficientData) {
+    label = '⚪ Traffic Anomaly';
+    message = 'Not enough traffic history';
+    detail = 'At least three completed hourly periods are needed.';
+    status = '';
+  } else if (status === 'spike') {
+    label = '🚨 Traffic Spike';
+    message = 'Traffic is unusually high';
+    detail = current.toLocaleString() + ' messages vs ' +
+      baseline.toLocaleString() + ' typical per hour (' +
+      (percent > 0 ? '+' : '') + percent.toFixed(1) + '%)';
+  } else if (status === 'drop') {
+    label = '🟡 Traffic Drop';
+    message = 'Traffic is unusually quiet';
+    detail = current.toLocaleString() + ' messages vs ' +
+      baseline.toLocaleString() + ' typical per hour (' +
+      percent.toFixed(1) + '%)';
+  } else {
+    detail = current.toLocaleString() + ' messages vs ' +
+      baseline.toLocaleString() + ' typical per hour';
+  }
+
+  $('#insight-anomaly-label').text(label);
+  $('#insight-anomaly-message').text(message);
+  $('#insight-anomaly-detail').text(detail);
+  $('.insight-anomaly').removeClass('normal spike drop').addClass(status);
+}
+
+var insightRefreshTimer = null;
+
+function scheduleInsightRefresh() {
+  if (insightRefreshTimer) {
+    window.clearTimeout(insightRefreshTimer);
+  }
+
+  insightRefreshTimer = window.setTimeout(function () {
+    insightRefreshTimer = null;
+    loadInsights();
+  }, 1500);
+}
+
+function connectInsightLiveFeed() {
+  var status = document.getElementById('insight-live-feed-status');
+
+  if (typeof io !== 'function') {
+    if (status) status.textContent = 'Unavailable';
+    return;
+  }
+
+  var insightSocket = io({
+    transports: ['websocket'],
+    upgrade: false
+  });
+
+  insightSocket.on('connect', function () {
+    if (status) {
+      status.textContent = '🟢 LIVE';
+      status.className = 'pull-right text-success insight-live-status';
+    }
+  });
+
+  insightSocket.on('disconnect', function () {
+    if (status) {
+      status.textContent = '⚪ Disconnected';
+      status.className = 'pull-right text-muted insight-live-status';
+    }
+  });
+
+  insightSocket.on('connect_error', function () {
+    if (status) {
+      status.textContent = '🔴 Connection error';
+      status.className = 'pull-right text-danger insight-live-status';
+    }
+  });
+
+  insightSocket.on('messagePost', function (message) {
+    addLiveInsightMessage(message);
+    scheduleInsightRefresh();
+  });
+
+  return insightSocket;
+}
+
+var insightAutoRefreshTimer = null;
+
+function startInsightAutoRefresh() {
+  if (insightAutoRefreshTimer) {
+    window.clearInterval(insightAutoRefreshTimer);
+  }
+
+  insightAutoRefreshTimer = window.setInterval(function () {
+    var detailPanel = document.getElementById('insight-message-detail');
+    var liveFeed = document.getElementById('insight-live-feed');
+
+    if (detailPanel && detailPanel.style.display !== 'none') {
+      return;
+    }
+
+    if (liveFeed && liveFeed.matches(':hover')) {
+      return;
+    }
+
+    loadInsights();
+  }, 30000);
+}
+
+var insightLoading = false;
+
 function loadInsights() {
+  if (insightLoading) return;
+
+  insightLoading = true;
+
   var range = insightRange();
   $.getJSON('/api/insights?start=' + range.start + '&end=' + range.end)
     .done(function (data) {
       $('#insight-messages').text(data.messages.toLocaleString());
       $('#insight-addresses').text(data.uniqueAddresses.toLocaleString());
       $('#insight-capcodes').text(data.uniqueCapcodes.toLocaleString());
-      $('#insight-source').text(data.topSources.length ? data.topSources[0].source : '—');
+      $('#insight-source').text(data.topAgencies.length ? data.topAgencies[0].agency || 'UNKNOWN' : 'UNKNOWN');
+      renderLivePulse(data.livePulse);
+      renderAnomaly(data.anomaly);
       renderInsightChart(data.activity);
-      renderInsightTable('#insight-address-table', data.topAddresses, function (row) { return row.address || '—'; });
-      renderInsightTable('#insight-capcode-table', data.topCapcodes, function (row) { return row.alias || row.address || '—'; });
-      renderInsightTable('#insight-source-table', data.topSources, function (row) { return row.source || '—'; });
+      renderPeakActivity(data.peakActivity);
+      renderActivityHeatmap(data.activity);
+      renderTrends(data.trends);
+      renderAgencyList(data.topAgencies, data.messages);
+      renderProtocolTable(data.topProtocols, data.messages);
+      renderInsightTable('#insight-address-table', data.topAddresses, function (row) { return row.address || '—'; }, data.messages);
+      renderInsightTable('#insight-capcode-table', data.topCapcodes, function (row) { return row.alias || row.address || '—'; }, data.messages);
+      renderInsightTable('#insight-source-table', data.topAgencies, function (row) { return row.agency || 'UNKNOWN'; });
       $('#insight-error').hide();
+
+      var updated = new Date().toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+
+      $('#insight-data-status')
+        .removeClass('text-danger')
+        .addClass('text-success')
+        .html('<i class="fa fa-check-circle"></i> Data updated ' + updated);
     })
-    .fail(function (xhr) { var message = 'Unable to load Insights.'; if (xhr.responseJSON && xhr.responseJSON.error) message = xhr.responseJSON.error; $('#insight-error').text(message).show(); });
+    .fail(function (xhr) {
+      var message = 'Unable to load Insights.';
+      if (xhr.responseJSON && xhr.responseJSON.error) message = xhr.responseJSON.error;
+
+      $('#insight-error').text(message).show();
+
+      $('#insight-data-status')
+        .removeClass('text-success')
+        .addClass('text-danger')
+        .html('<i class="fa fa-exclamation-circle"></i> Data refresh failed');
+    })
+    .always(function () {
+      insightLoading = false;
+    });
+}
+
+function setInsightDetailOrder(order) {
+  insightDetailOrder = order;
+
+  $('#insight-detail-newest').toggleClass('active', order === 'newest');
+  $('#insight-detail-oldest').toggleClass('active', order === 'oldest');
+
+  renderInsightDetailMessages();
 }
 
 $(function () {
+  $('#insight-refresh').on('click', function () {
+    var button = $(this);
+    var icon = button.find('i');
+
+    button.prop('disabled', true);
+    icon.addClass('fa-spin');
+
+    loadInsights();
+
+    window.setTimeout(function () {
+      button.prop('disabled', false);
+      icon.removeClass('fa-spin');
+    }, 1000);
+  });
+
+  $('#insight-export').on('click', function () {
+    var range = insightRange();
+    var button = $(this);
+    var icon = button.find('i');
+
+    button.prop('disabled', true);
+    icon.removeClass('fa-download').addClass('fa-spinner fa-spin');
+
+    var url = '/api/insights/export?start=' +
+      encodeURIComponent(range.start) +
+      '&end=' +
+      encodeURIComponent(range.end);
+
+    window.location.href = url;
+
+    window.setTimeout(function () {
+      button.prop('disabled', false);
+      icon.removeClass('fa-spinner fa-spin').addClass('fa-download');
+    }, 1500);
+  });
+
+  $('#insight-message-detail-close').on('click', function () {
+    $('#insight-message-detail').hide();
+  });
+
+  $('#insight-detail-newest').on('click', function () {
+    setInsightDetailOrder('newest');
+  });
+
+  $('#insight-detail-oldest').on('click', function () {
+    setInsightDetailOrder('oldest');
+  });
+
+  $('#insight-live-feed-clear').on('click', function () {
+    clearLiveInsightMessages();
+    clearNewLiveMessageIndicator();
+  });
+
+  $('#insight-live-feed-new').on('click', function () {
+    showNewestLiveMessages();
+  });
+
+  restoreLiveInsightMessages();
+
   $('.insight-range').on('click', function () {
     insightCustomRange = null;
     insightDays = Number($(this).data('days'));
     $('.insight-range').removeClass('active');
     $(this).addClass('active');
     $('#insight-custom').hide();
+    updateInsightExportRangeLabel();
     loadInsights();
   });
 
@@ -162,11 +1367,16 @@ $(function () {
     }
     insightCustomRange = { start: Math.floor(start), end: Math.floor(end) };
     $('.insight-range').removeClass('active');
+    updateInsightExportRangeLabel();
     loadInsights();
   });
 
   $('.insight-range[data-days="1"]').addClass('active');
+  updateInsightExportRangeLabel();
+  bindLiveInsightClicks();
+  connectInsightLiveFeed();
   loadInsights();
+  startInsightAutoRefresh();
 });
 </script>
 </body>
