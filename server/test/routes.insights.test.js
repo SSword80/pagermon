@@ -30,31 +30,43 @@ afterEach(() => db.migrate.rollback().then(() => passportStub.logout()));
 
 describe('Insights authentication', () => {
     it('should reject unauthenticated access to insights', done => {
+        nconf.set('messages:apiSecurity', true);
+        nconf.save();
         chai.request(server)
             .get('/api/insights?start=1529487000&end=1529500000')
             .end((err, res) => {
                 should.not.exist(err);
                 res.status.should.eql(401);
+                nconf.set('messages:apiSecurity', false);
+                nconf.save();
                 done();
             });
     });
 
     it('should reject unauthenticated access to insight messages', done => {
+        nconf.set('messages:apiSecurity', true);
+        nconf.save();
         chai.request(server)
             .get('/api/insights/messages?start=1529487000&end=1529490000')
             .end((err, res) => {
                 should.not.exist(err);
                 res.status.should.eql(401);
+                nconf.set('messages:apiSecurity', false);
+                nconf.save();
                 done();
             });
     });
 
     it('should reject unauthenticated access to insight export', done => {
+        nconf.set('messages:apiSecurity', true);
+        nconf.save();
         chai.request(server)
             .get('/api/insights/export?start=1529487000&end=1529490000')
             .end((err, res) => {
                 should.not.exist(err);
                 res.status.should.eql(401);
+                nconf.set('messages:apiSecurity', false);
+                nconf.save();
                 done();
             });
     });
