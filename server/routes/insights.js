@@ -38,44 +38,52 @@ function buildPeakActivity(activity) {
 }
 
 function buildAnomaly(activity, livePulseCount) {
-  var hour = 60 * 60;
-  var current = Number(livePulseCount || 0);
-  var now = Math.floor(Date.now() / 1000);
-  var currentWindowStart = now - hour;
-  var previousWindows = (activity || []).filter(function (point) {
-    var timestamp = Number(point.timestamp);
-    return timestamp < Math.floor(currentWindowStart / hour) * hour;
-  });
+    var hour = 60 * 60;
+    var current = Number(livePulseCount || 0);
+    var now = Math.floor(Date.now() / 1000);
+    var currentHour = Math.floor(now / hour) * hour;
 
-  if (previousWindows.length < 3) {
-    return { status: 'normal', current: current, baseline: 0, percent: 0, sufficientData: false };
-  }
+    var previousWindows = (activity || []).filter(function (point) {
+        var timestamp = Number(point.timestamp);
+        return timestamp < currentHour;
+    });
 
-  var total = previousWindows.reduce(function (sum, point) {
-    return sum + (Number(point.count) || 0);
-  }, 0);
+    if (previousWindows.length < 3) {
+        return {
+            status: 'normal',
+            current: current,
+            baseline: 0,
+            percent: 0,
+            sufficientData: false
+        };
+    }
 
-  var baseline = total / previousWindows.length;
-  var percent = baseline === 0
-    ? (current === 0 ? 0 : 100)
-    : Math.round(((current - baseline) / baseline) * 1000) / 10;
+    var total = previousWindows.reduce(function (sum, point) {
+        return sum + (Number(point.count) || 0);
+    }, 0);
 
-  var status = 'normal';
-  if (baseline === 0) {
-    status = current > 0 ? 'spike' : 'normal';
-  } else if (current >= baseline * 1.5) {
-    status = 'spike';
-  } else if (current <= baseline * 0.5) {
-    status = 'drop';
-  }
+    var baseline = total / previousWindows.length;
+    var percent = baseline === 0
+        ? (current === 0 ? 0 : 100)
+        : Math.round(((current - baseline) / baseline) * 1000) / 10;
 
-  return {
-    status: status,
-    current: current,
-    baseline: Math.round(baseline * 10) / 10,
-    percent: percent,
-    sufficientData: true
-  };
+    var status = 'normal';
+
+    if (baseline === 0) {
+        status = current > 0 ? 'spike' : 'normal';
+    } else if (current >= baseline * 1.5) {
+        status = 'spike';
+    } else if (current <= baseline * 0.5) {
+        status = 'drop';
+    }
+
+    return {
+        status: status,
+        current: current,
+        baseline: Math.round(baseline * 10) / 10,
+        percent: percent,
+        sufficientData: true
+    };
 }
 
 function buildTrend(current, previous) {
